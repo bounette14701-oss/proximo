@@ -8,6 +8,8 @@ import { ErrorMessage, Spinner } from '@/components/Feedback';
 import api from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
 import type { Conversation, Message } from '@/lib/types';
+import { RequireAccount } from '@/components/RequireAccount';
+
 
 /**
  * Fil de discussion : affichage, envoi, rafraîchissement périodique
@@ -93,6 +95,7 @@ export default function ConversationPage() {
   }
 
   return (
+    <RequireAccount>
     <div className="mx-auto flex max-w-2xl flex-col space-y-4">
       <div className="flex items-center justify-between">
         <Link href="/messages" className="text-sm font-medium text-brand-600 hover:underline">
@@ -164,5 +167,6 @@ export default function ConversationPage() {
         </form>
       </div>
     </div>
+      </RequireAccount>
   );
 }

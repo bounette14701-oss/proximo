@@ -16,8 +16,21 @@ async function bootstrap(): Promise<void> {
   // via X-Forwarded-For (rate limiting, logs).
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
 
-  // En-têtes de sécurité. API JSON uniquement : pas de CSP nécessaire.
-  app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
+  // En-têtes de sécurité. API JSON uniquement : CSP strict « rien par défaut »
+  // (aucune ressource n'est censée être chargée depuis l'API) + COEP par défaut.
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'none'"],
+          baseUri: ["'none'"],
+          formAction: ["'none'"],
+          frameAncestors: ["'none'"],
+          objectSrc: ["'none'"],
+        },
+      },
+    }),
+  );
   app.use(cookieParser());
 
   // Toutes les routes sous /api (ex. /api/auth/login)

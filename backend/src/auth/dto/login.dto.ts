@@ -1,7 +1,9 @@
-import { IsEmail, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsEmail, IsOptional, IsString, MaxLength } from 'class-validator';
 
 /**
- * Connexion.
+ * Connexion locale.
+ * `rememberMe` : étend la durée de vie du refresh token (90 jours au lieu
+ * de 30) — le cookie HTTP-only reste de type « session » dans les deux cas.
  */
 export class LoginDto {
   @IsEmail({}, { message: 'Adresse email invalide' })
@@ -10,4 +12,8 @@ export class LoginDto {
 
   @IsString({ message: 'Mot de passe requis' })
   password!: string;
+
+  @IsOptional()
+  @IsBoolean({ message: 'Valeur invalide' })
+  rememberMe?: boolean;
 }

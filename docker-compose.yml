@@ -29,12 +29,36 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      DATABASE_URL: postgresql://proximo:${POSTGRES_PASSWORD:?}@db:5432/proximo?schema=public
+      DATABASE_URL: postgresql://proximo:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requis — voir .env.example}@db:5432/proximo?schema=public
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET requis — voir .env.example}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET requis — voir .env.example}
       JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-900}
       JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-2592000}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      # Sprint 2 — administrateurs bootstrap (emails séparés par des virgules)
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      # Sprint 2 — Google OAuth2 (OpenID Connect)
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-}
+      # Sprint 2 — emails transactionnels (SMTP)
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-Proximo <no-reply@proximo.local>}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      BREVO_FROM_EMAIL: ${BREVO_FROM_EMAIL:-}
+      BREVO_FROM_NAME: ${BREVO_FROM_NAME:-Proximo}
+      SYNDIC_EMAIL: ${SYNDIC_EMAIL:-}
+      # Sprint 2 — URLs publiques (frontend) et stockage des pièces jointes
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
+      API_URL: ${API_URL:-http://localhost:8080/api}
+      UPLOAD_DIR: /data/uploads
+    volumes:
+      - uploads_data:/data/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -72,6 +96,7 @@ services:
 
 volumes:
   db_data:
+  uploads_data:
 
 networks:
   proximo:

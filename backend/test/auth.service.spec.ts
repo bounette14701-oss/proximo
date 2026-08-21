@@ -1,5 +1,6 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { EmailService } from '../src/email/email.service';
 import { AuthService } from '../src/auth/auth.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 
@@ -18,8 +19,9 @@ const argon2Mock = argon2 as jest.Mocked<typeof argon2>;
  */
 describe('AuthService', () => {
   let authService: AuthService;
-  let prisma: { user: any; refreshToken: any };
+  let prisma: { user: any; refreshToken: any; invitation: any };
   let jwtService: JwtService;
+  let emailService: EmailService;
 
   const now = new Date();
   const fakeUser = {
@@ -29,6 +31,11 @@ describe('AuthService', () => {
     firstName: 'Claire',
     lastName: 'Martin',
     neighborhood: 'Lyon 7e',
+    role: 'USER',
+    status: 'ACTIVE',
+    totpSecret: null,
+    totpEnabled: false,
+    emailNotifications: true,
     createdAt: now,
     updatedAt: now,
   };
@@ -38,16 +45,24 @@ describe('AuthService', () => {
       user: {
         findUnique: jest.fn(),
         create: jest.fn().mockResolvedValue(fakeUser),
+        update: jest.fn().mockResolvedValue(fakeUser),
       },
       refreshToken: {
         create: jest.fn().mockResolvedValue({ id: 'rt-1' }),
         update: jest.fn().mockResolvedValue({}),
       },
+      invitation: {
+        findUnique: jest.fn(),
+        update: jest.fn(),
+      },
     };
     jwtService = {
       signAsync: jest.fn().mockResolvedValue('jwt-token'),
     } as unknown as JwtService;
-    authService = new AuthService(prisma as unknown as PrismaService, jwtService);
+    emailService = {
+      sendWelcome: jest.fn().mockResolvedValue(undefined),
+    } as unknown as EmailService;
+    authService = new AuthService(prisma as unknown as PrismaService, jwtService, emailService);
   });
 
   afterEach(() => {
@@ -81,6 +96,18 @@ describe('AuthService', () => {
       expect(user.email).toBe('voisin@example.com');
       // Jamais de hash exposé dans la réponse.
       expect(user).not.toHaveProperty('passwordHash');
+    });
+
+    it("envoie un email de bienvenue après l'inscription", async () => {
+      argon2Mock.hash.mockResolvedValue('hashed');
+      prisma.user.findUnique.mockResolvedValue(null);
+      await authService.register({
+        email: 'voisin@example.com',
+        password: 'Motdepasse123',
+        firstName: 'Claire',
+        lastName: 'Martin',
+      });
+      expect(emailService.sendWelcome).toHaveBeenCalledWith('voisin@example.com', 'Claire');
     });
 
     it('refuse un email déjà utilisé', async () => {
@@ -121,6 +148,14 @@ describe('AuthService', () => {
       prisma.user.findUnique.mockResolvedValue(null);
       await expect(
         authService.login({ email: 'inconnu@example.com', password: 'Motdepasse123' }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('refuse un compte suspendu', async () => {
+      prisma.user.findUnique.mockResolvedValue({ ...fakeUser, status: 'SUSPENDED' });
+      argon2Mock.verify.mockResolvedValue(true);
+      await expect(
+        authService.login({ email: 'voisin@example.com', password: 'Motdepasse123' }),
       ).rejects.toBeInstanceOf(UnauthorizedException);
     });
   });

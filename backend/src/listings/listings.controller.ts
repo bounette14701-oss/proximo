@@ -15,6 +15,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { StatusGuard } from '../common/guards/status.guard';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { QueryListingsDto } from './dto/query-listings.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
@@ -25,22 +26,31 @@ import { ListingsService } from './listings.service';
  * Routes protégées : création, modification, suppression (propriétaire).
  */
 @Controller('listings')
+@UseGuards(JwtAuthGuard, StatusGuard)
 export class ListingsController {
   constructor(private readonly listingsService: ListingsService) {}
 
   @Get()
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
   async findAll(@Query() query: QueryListingsDto) {
     const result = await this.listingsService.findAll(query);
     return result;
   }
 
+  @Get('mine')
+  async mine(@CurrentUser() user: { id: string }) {
+    const listings = await this.listingsService.findMine(user.id);
+    return { listings };
+  }
+
   @Get(':id')
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.listingsService.findOne(id);
+    const listing = await this.listingsService.findOne(id);
+    return { listing };
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @HttpCode(HttpStatus.CREATED)
   async create(@CurrentUser() user: { id: string }, @Body() dto: CreateListingDto) {
@@ -49,7 +59,6 @@ export class ListingsController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -61,7 +70,7 @@ export class ListingsController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, StatusGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: { id: string }) {
     await this.listingsService.remove(id, user.id);

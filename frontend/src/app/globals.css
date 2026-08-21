@@ -3,5 +3,16 @@
 @tailwind utilities;
 
 body {
-  @apply bg-slate-50 text-slate-800 antialiased;
+  @apply bg-slate-100 text-slate-800 antialiased;
+}
+
+/* Marge basse sur mobile pour laisser la place à la tab bar */
+main {
+  padding-bottom: 5rem;
+}
+
+@media (min-width: 768px) {
+  main {
+    padding-bottom: 3rem;
+  }
 }
