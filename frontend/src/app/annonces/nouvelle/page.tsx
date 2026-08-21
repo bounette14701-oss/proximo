@@ -137,7 +137,12 @@ function NewListingForm() {
       setSuccess('Annonce publiée !');
       setTimeout(() => router.push(`/annonces/${result.listing.id}`), 700);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Publication impossible');
+      const message = err instanceof Error ? err.message : 'Publication impossible';
+      setError(
+        /too large|entity too large|Payload Too Large/i.test(message)
+          ? 'Fichier trop volumineux (10 Mo maximum par fichier).'
+          : message,
+      );
     } finally {
       setSubmitting(false);
     }

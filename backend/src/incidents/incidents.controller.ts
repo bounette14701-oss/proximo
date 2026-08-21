@@ -29,7 +29,7 @@ import { IncidentsService, uploadsDir } from './incidents.service';
 
 /** Types MIME autorisés pour les pièces jointes (validés APRÈS multer). */
 export const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']);
-export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 Mo par fichier
+export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 Mo par fichier
 export const MAX_FILES = 5;
 const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.pdf']);
 
