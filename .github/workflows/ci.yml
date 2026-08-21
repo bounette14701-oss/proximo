@@ -41,7 +41,7 @@ jobs:
           NODE_OPTIONS: --dns-result-order=ipv4first
         run: |
           npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 --cache /tmp/npm-cache \
-            || { sleep 10; npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 --cache /tmp/npm-cache; }
+            || { sleep 10; npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 --cache /tmp/npm-cache --registry=https://registry.npmmirror.com; }
 
       - name: Générer le client Prisma
         # Version épinglée : si npm ci a échoué partiellement, npx ne doit
@@ -82,7 +82,7 @@ jobs:
           NODE_OPTIONS: --dns-result-order=ipv4first
         run: |
           npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 --cache /tmp/npm-cache \
-            || { sleep 10; npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 --cache /tmp/npm-cache; }
+            || { sleep 10; npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 --cache /tmp/npm-cache --registry=https://registry.npmmirror.com; }
 
       - name: Lint
         run: npm run lint
