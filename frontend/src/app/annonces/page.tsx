@@ -159,7 +159,7 @@ export default function ListingsPage() {
             onKeyDown={(event) => {
               if (event.key === 'Enter') void geocodeAddress();
             }}
-            placeholder="Ou saisissez une adresse / un quartier (ex. Lyon 7e)"
+            placeholder="Ou saisissez une adresse / un résidence (ex. Lyon 7e)"
             className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
           />
           <button

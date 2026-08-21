@@ -14,7 +14,7 @@ interface InvitationInfo {
 
 /**
  * Page d'atterrissage scannée via le QR code d'invitation :
- * affiche le quartier / la résidence, puis redirige vers l'inscription
+ * affiche le résidence / la résidence, puis redirige vers l'inscription
  * avec le jeton (pré-remplissage automatique du périmètre).
  */
 function RejoindreContent() {
@@ -74,7 +74,7 @@ function RejoindreContent() {
     <div className="mx-auto max-w-md px-4 py-16">
       <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
         <div className="text-4xl">🏘️</div>
-        <h1 className="mt-3 text-2xl font-bold text-slate-900">Bienvenue dans le quartier !</h1>
+        <h1 className="mt-3 text-2xl font-bold text-slate-900">Bienvenue dans votre résidence !</h1>
         <p className="mt-2 text-sm text-slate-600">
           Un voisin vous invite à rejoindre <strong className="text-slate-900">{invitation.neighborhood}</strong>{' '}
           sur Proximo : prêt de matériel, entraide, dons…

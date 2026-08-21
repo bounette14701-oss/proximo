@@ -11,7 +11,7 @@ import { CATEGORY_LABELS, ListingCategory } from '@/lib/types';
 /**
  * Création d'une annonce (réservée aux utilisateurs connectés).
  * Localisation par adresse (géocodage automatique) ou, en repli,
- * par coordonnées manuelles + quartier.
+ * par coordonnées manuelles + résidence.
  */
 export default function NewListingPage() {
   const router = useRouter();
@@ -79,7 +79,7 @@ export default function NewListingPage() {
         payload.neighborhood = neighborhood.trim();
       } else {
         setError(
-          'Indiquez une adresse (recommandé) ou des coordonnées manuelles avec un quartier.',
+          'Indiquez une adresse (recommandé) ou des coordonnées manuelles avec un résidence.',
         );
         setSubmitting(false);
         return;
@@ -160,13 +160,13 @@ export default function NewListingPage() {
 
         <fieldset className="rounded-xl border border-slate-200 p-4">
           <legend className="px-2 text-sm font-medium text-slate-700">
-            Localisation (jamais affichée publiquement — seul le quartier l&apos;est)
+            Localisation (jamais affichée publiquement — seul le résidence l&apos;est)
           </legend>
 
           <div className="space-y-3">
             <div>
               <label htmlFor="address" className="mb-1 block text-sm text-slate-600">
-                Adresse ou quartier (recommandé — géolocalisation automatique)
+                Adresse ou résidence (recommandé — géolocalisation automatique)
               </label>
               <input
                 id="address"
@@ -211,7 +211,7 @@ export default function NewListingPage() {
                 type="text"
                 value={neighborhood}
                 onChange={(event) => setNeighborhood(event.target.value)}
-                placeholder="Quartier affiché"
+                placeholder="Résidence affiché"
                 className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
               />
             </div>

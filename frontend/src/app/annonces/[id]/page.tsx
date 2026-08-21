@@ -11,7 +11,7 @@ import { CATEGORY_EMOJI, CATEGORY_LABELS, Listing, STATUS_LABELS } from '@/lib/t
 
 /**
  * Détail d'une annonce + mise en relation (message au voisin).
- * L'adresse exacte n'est jamais affichée : uniquement le quartier.
+ * L'adresse exacte n'est jamais affichée : uniquement le résidence.
  */
 export default function ListingDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -104,7 +104,7 @@ export default function ListingDetailPage() {
 
         <dl className="mt-6 space-y-2 border-t border-slate-100 pt-4 text-sm text-slate-500">
           <div className="flex justify-between gap-4">
-            <dt>Quartier</dt>
+            <dt>Résidence</dt>
             <dd className="font-medium text-slate-700">📍 {listing.neighborhood}</dd>
           </div>
           {listing.distanceKm !== undefined && (

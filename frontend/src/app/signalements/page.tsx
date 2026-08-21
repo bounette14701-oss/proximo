@@ -91,7 +91,7 @@ export default function SignalementsPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Quartier</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Résidence</label>
             <input
               type="text"
               maxLength={120}

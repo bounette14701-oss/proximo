@@ -221,7 +221,7 @@ export default function AdminPage() {
                       </p>
                       <p className="text-sm text-slate-500">{member.email}</p>
                       <p className="text-xs text-slate-400">
-                        {member.neighborhood ?? 'Quartier non précisé'} ·{' '}
+                        {member.neighborhood ?? 'Résidence non précisée'} ·{' '}
                         {new Date(member.createdAt).toLocaleDateString('fr-FR')}
                       </p>
                     </div>
@@ -344,7 +344,7 @@ export default function AdminPage() {
           >
             <div className="flex flex-wrap items-end gap-3">
               <div className="flex-1">
-                <label className="mb-1 block text-sm font-medium text-slate-700">Quartier</label>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Résidence</label>
                 <input
                   type="text"
                   required

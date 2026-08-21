@@ -11,7 +11,7 @@ import type { User } from '@/lib/types';
 
 /**
  * Inscription — Sprint 2 :
- * - jeton d'invitation optionnel (QR / lien de voisin) : le quartier est
+ * - jeton d'invitation optionnel (QR / lien de voisin) : le résidence est
  *   pré-rempli et le jeton est consommé (usage unique) côté serveur.
  * - les nouveaux comptes sont PENDING jusqu'à validation par un admin
  *   (sauf emails déclarés administrateurs).
@@ -89,7 +89,7 @@ function InscriptionForm() {
         <h1 className="text-2xl font-bold text-slate-900">Inscription</h1>
         <p className="mt-1 text-sm text-slate-600">
           {invitationToken
-            ? 'Rejoignez votre quartier 🏘️'
+            ? 'Rejoignez votre résidence 🏢'
             : 'Entraide et partage de proximité 🤝'}
         </p>
 
@@ -151,7 +151,7 @@ function InscriptionForm() {
             maxLength={120}
             value={neighborhood}
             onChange={(event) => setNeighborhood(event.target.value)}
-            placeholder="Quartier / résidence (ex. Lyon 7e)"
+            placeholder="Résidence / immeuble (ex. Les Cèdres)"
             className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:border-brand-500 focus:outline-none"
           />
           <ErrorMessage message={error} />
