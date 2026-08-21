@@ -31,9 +31,11 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
+      - name: Pinner npm (bug "Exit handler never called!" de npm 10.9.x)
+        run: npm install -g npm@10.8.2
+
       - name: Installer les dépendances
-        # Résilience : IPv4 forcé (bug npm "Exit handler never called!" lié au
-        # DNS IPv6 des runners) + retries renforcés + nouvelle tentative.
+        # Résilience : IPv4 forcé + retries renforcés + nouvelle tentative.
         env:
           NODE_OPTIONS: --dns-result-order=ipv4first
         run: |
@@ -67,8 +69,11 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
+      - name: Pinner npm (bug "Exit handler never called!" de npm 10.9.x)
+        run: npm install -g npm@10.8.2
+
       - name: Installer les dépendances
-        # Résilience : IPv4 forcé (bug npm "Exit handler never called!") + retries + retry.
+        # Résilience : IPv4 forcé + retries renforcés + nouvelle tentative.
         env:
           NODE_OPTIONS: --dns-result-order=ipv4first
         run: |
