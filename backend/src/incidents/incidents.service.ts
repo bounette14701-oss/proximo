@@ -168,18 +168,16 @@ export class IncidentsService {
     });
     if (!reporter) return;
 
-    await this.emailService.sendIncidentToSyndic({
-      to: syndicEmail,
-      agencyName: settings?.agencyName ?? 'Agence de gestion',
-      incident: {
+    await this.emailService.sendIncidentToSyndic(
+      syndicEmail,
+      {
         title: incident.title,
         category: incident.category,
         description: incident.description,
         neighborhood: neighborhood ?? 'Non précisé',
-        createdAt: incident.createdAt,
       },
       reporter,
-      attachments: attachments.map((a) => ({ filename: a.filename, size: a.size })),
-    });
+      attachments.map((a) => ({ filename: a.filename, mimeType: a.mimeType })),
+    );
   }
 }

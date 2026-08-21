@@ -18,7 +18,6 @@ const TABS = [
   { href: '/', label: 'Accueil', icon: '🏠' },
   { href: '/annonces', label: 'Annonces', icon: '📦' },
   { href: '/messages', label: 'Messages', icon: '💬' },
-  { href: '/signalements', label: 'Signalements', icon: '🛠️' },
   { href: '/profil', label: 'Profil', icon: '👤' },
 ];
 

@@ -35,11 +35,11 @@ export default function HomePage() {
                 href="/annonces/nouvelle"
                 className="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-brand-700 shadow hover:bg-brand-50"
               >
-                + Déposer une annonce
+                + Publier dans la résidence
               </Link>
               {user.status === 'ACTIVE' && (
                 <Link
-                  href="/signalements"
+                  href="/annonces/nouvelle?categorie=SIGNALEMENT"
                   className="rounded-xl border border-white/40 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/10"
                 >
                   Signaler un incident
@@ -80,7 +80,7 @@ export default function HomePage() {
         <section className="grid grid-cols-3 gap-3">
           {[
             { href: '/annonces', icon: '📦', label: 'Annonces' },
-            { href: '/signalements', icon: '🛠️', label: 'Signalements' },
+            { href: '/annonces?categorie=SIGNALEMENT', icon: '🛠️', label: 'Signalements' },
             { href: '/inviter', icon: '📲', label: 'Inviter un voisin' },
           ].map((item) => (
             <Link

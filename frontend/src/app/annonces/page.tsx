@@ -1,26 +1,39 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import api from '@/lib/api';
-import { CATEGORY_LABELS, Listing, ListingCategory, ListingPage } from '@/lib/types';
+import {
+  CATEGORY_LABELS,
+  INCIDENT_CATEGORY_LABELS,
+  INCIDENT_STATUS_LABELS,
+  type Incident,
+  type Listing,
+  type ListingCategory,
+  type ListingPage,
+} from '@/lib/types';
 import { ListingCard } from '@/components/ListingCard';
 import { ErrorMessage, Spinner } from '@/components/Feedback';
 import { RequireAccount } from '@/components/RequireAccount';
 
-
 /**
- * Recherche d'annonces avec périmètre géographique.
- * Localisation : géolocalisation du navigateur (bouton) ou saisie d'une
- * adresse (géocodage via l'API). Sans localisation : annonces récentes.
+ * Fil unifié de la résidence : annonces (prêt, service, don, avis) et
+ * signalements — le choix se fait dans la catégorie.
  */
-export default function ListingsPage() {
+type FilterCategory = '' | ListingCategory | 'SIGNALEMENT';
+const SIGNALEMENT = 'SIGNALEMENT';
+
+function ListingsContent() {
+  const searchParams = useSearchParams();
   const [listings, setListings] = useState<Listing[]>([]);
   const [total, setTotal] = useState(0);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState<'' | ListingCategory>('');
+  const [category, setCategory] = useState<FilterCategory>('');
   const [radiusKm, setRadiusKm] = useState(10);
   const [location, setLocation] = useState<{ lat: number; lng: number; label: string } | null>(null);
   const [addressInput, setAddressInput] = useState('');
@@ -28,32 +41,47 @@ export default function ListingsPage() {
   const [page, setPage] = useState(1);
   const pageSize = 12;
 
+  const showIncidents = category === SIGNALEMENT;
+
+  // ?categorie=SIGNALEMENT (accès depuis l'accueil / redirections).
+  useEffect(() => {
+    if (searchParams.get('categorie') === SIGNALEMENT) setCategory(SIGNALEMENT);
+  }, [searchParams]);
+
   const fetchListings = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(pageSize),
-      });
-      if (search.trim()) params.set('search', search.trim());
-      if (category) params.set('category', category);
-      if (location) {
-        params.set('lat', String(location.lat));
-        params.set('lng', String(location.lng));
-        params.set('radiusKm', String(radiusKm));
+      if (showIncidents) {
+        const data = await api<{ incidents: Incident[] }>('/incidents');
+        setIncidents(data.incidents);
+        setListings([]);
+        setTotal(data.incidents.length);
+      } else {
+        const params = new URLSearchParams({
+          page: String(page),
+          limit: String(pageSize),
+        });
+        if (search.trim()) params.set('search', search.trim());
+        if (category) params.set('category', category);
+        if (location) {
+          params.set('lat', String(location.lat));
+          params.set('lng', String(location.lng));
+          params.set('radiusKm', String(radiusKm));
+        }
+        const data = await api<ListingPage>(`/listings?${params.toString()}`);
+        setListings(data.items);
+        setTotal(data.total);
       }
-      const data = await api<ListingPage>(`/listings?${params.toString()}`);
-      setListings(data.items);
-      setTotal(data.total);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de chargement');
       setListings([]);
+      setIncidents([]);
       setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [search, category, location, radiusKm, page]);
+  }, [search, category, location, radiusKm, page, showIncidents]);
 
   useEffect(() => {
     void fetchListings();
@@ -83,16 +111,17 @@ export default function ListingsPage() {
     );
   };
 
-  // Géocodage d'une adresse via l'API.
+  // Géocodage d'une adresse saisie.
   const geocodeAddress = async () => {
-    if (!addressInput.trim()) return;
+    const query = addressInput.trim();
+    if (!query) return;
     setLocating(true);
     setError(null);
     try {
-      const result = await api<{ lat: number; lng: number; displayName: string }>(
-        `/geocode?q=${encodeURIComponent(addressInput.trim())}`,
+      const data = await api<{ lat: number; lng: number; label: string }>(
+        `/geocode?q=${encodeURIComponent(query)}`,
       );
-      setLocation({ lat: result.lat, lng: result.lng, label: result.displayName });
+      setLocation(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Adresse introuvable');
     } finally {
@@ -104,29 +133,42 @@ export default function ListingsPage() {
 
   return (
     <RequireAccount>
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900">Annonces près de chez moi</h1>
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">
+              {showIncidents ? 'Signalements de la résidence' : 'Annonces de la résidence'}
+            </h1>
+            <p className="text-sm text-slate-500">
+              {showIncidents
+                ? 'Vos signalements envoyés à l’agence et leur suivi.'
+                : 'Prêt, service, don, avis — tout ce qui circule dans votre résidence.'}
+            </p>
+          </div>
+          <Link
+            href="/annonces/nouvelle"
+            className="rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700"
+          >
+            + {showIncidents ? 'Signaler un incident' : 'Publier'}
+          </Link>
+        </div>
 
-      {/* Filtres */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Filtres */}
+        <div className="flex flex-wrap gap-2">
           <input
             type="search"
             value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(1);
-            }}
-            placeholder="Rechercher (perceuse, garde d'enfant…)"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Rechercher (perceuse, colis, fuite…)"
+            className="min-w-52 flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none"
           />
           <select
             value={category}
             onChange={(event) => {
-              setCategory(event.target.value as '' | ListingCategory);
+              setCategory(event.target.value as FilterCategory);
               setPage(1);
             }}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+            className="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:outline-none"
           >
             <option value="">Toutes les catégories</option>
             {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
@@ -134,106 +176,156 @@ export default function ListingsPage() {
                 {label}
               </option>
             ))}
+            <option value={SIGNALEMENT}>🛠️ Signalements</option>
           </select>
-          <input
-            type="number"
-            min={1}
-            max={100}
-            value={radiusKm}
-            onChange={(event) => setRadiusKm(Number(event.target.value) || 10)}
-            placeholder="Rayon (km)"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
-          />
-          <button
-            type="button"
-            onClick={locateMe}
-            disabled={locating}
-            className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
-          >
-            {locating ? 'Localisation…' : '📍 Me localiser'}
-          </button>
+          {!showIncidents && (
+            <>
+              <select
+                value={radiusKm}
+                onChange={(event) => setRadiusKm(Number(event.target.value))}
+                className="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:outline-none"
+              >
+                {[1, 2, 5, 10, 20, 50].map((value) => (
+                  <option key={value} value={value}>
+                    {value} km
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={locateMe}
+                disabled={locating}
+                className="rounded-lg border border-slate-300 px-3 py-2.5 text-sm font-medium hover:bg-slate-50 disabled:opacity-50"
+              >
+                📍 Me localiser
+              </button>
+            </>
+          )}
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <input
-            type="text"
-            value={addressInput}
-            onChange={(event) => setAddressInput(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') void geocodeAddress();
-            }}
-            placeholder="Ou saisissez une adresse / un résidence (ex. Lyon 7e)"
-            className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
-          />
-          <button
-            type="button"
-            onClick={() => void geocodeAddress()}
-            disabled={locating || !addressInput.trim()}
-            className="rounded-lg border border-brand-600 px-3 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-50"
-          >
-            Utiliser cette adresse
-          </button>
-          {location && (
+        {!showIncidents && (
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              value={addressInput}
+              onChange={(event) => setAddressInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  void geocodeAddress();
+                }
+              }}
+              placeholder="Ou saisissez une adresse / un résidence (ex. Lyon 7e)"
+              className="min-w-52 flex-1 rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-brand-500 focus:outline-none"
+            />
             <button
               type="button"
-              onClick={() => setLocation(null)}
-              className="rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-100"
-              title="Réinitialiser le périmètre"
+              onClick={() => void geocodeAddress()}
+              disabled={locating}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50 disabled:opacity-50"
             >
-              ✕ {location.label}
+              Utiliser cette adresse
             </button>
-          )}
-        </div>
-      </div>
+            {location && (
+              <span className="text-xs text-slate-500">📍 {location.label}</span>
+            )}
+          </div>
+        )}
 
-      {error && <ErrorMessage message={error} />}
+        <ErrorMessage message={error} />
 
-      {loading ? (
-        <Spinner label="Recherche des annonces…" />
-      ) : (
-        <>
-          <p className="text-sm text-slate-500">
-            {total} annonce{total > 1 ? 's' : ''}
-            {location ? ` dans un rayon de ${radiusKm} km` : ''}
-          </p>
-          {listings.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
-              Aucune annonce ne correspond à votre recherche.
-            </div>
+        {loading ? (
+          <Spinner />
+        ) : showIncidents ? (
+          incidents.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-slate-300 bg-white/60 p-8 text-center text-sm text-slate-500">
+              Aucun signalement pour le moment.{' '}
+              <Link href="/annonces/nouvelle?categorie=SIGNALEMENT" className="font-medium text-brand-600 hover:underline">
+                Signaler un problème à l’agence →
+              </Link>
+            </p>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {listings.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {incidents.map((incident) => (
+                <li
+                  key={incident.id}
+                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-slate-900">{incident.title}</p>
+                      <p className="mt-0.5 text-sm text-slate-500">
+                        {INCIDENT_CATEGORY_LABELS[incident.category]} · 📍{' '}
+                        {incident.neighborhood || 'Non précisée'}
+                      </p>
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        incident.status === 'OPEN'
+                          ? 'bg-amber-100 text-amber-700'
+                          : incident.status === 'IN_PROGRESS'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-green-100 text-green-700'
+                      }`}
+                    >
+                      {INCIDENT_STATUS_LABELS[incident.status]}
+                    </span>
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-sm text-slate-600">{incident.description}</p>
+                  <p className="mt-2 text-xs text-slate-400">
+                    {new Date(incident.createdAt).toLocaleDateString('fr-FR')} ·{' '}
+                    {incident.attachments?.length
+                      ? `${incident.attachments.length} pièce(s) jointe(s)`
+                      : 'sans pièce jointe'}
+                  </p>
+                </li>
               ))}
-            </div>
-          )}
+            </ul>
+          )
+        ) : listings.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-slate-300 bg-white/60 p-8 text-center text-sm text-slate-500">
+            Aucune annonce pour le moment.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {listings.map((listing) => (
+              <ListingCard key={listing.id} listing={listing} />
+            ))}
+          </div>
+        )}
 
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-3 pt-2">
-              <button
-                type="button"
-                disabled={page <= 1}
-                onClick={() => setPage((current) => current - 1)}
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-100 disabled:opacity-40"
-              >
-                ← Précédent
-              </button>
-              <span className="text-sm text-slate-500">
-                Page {page} / {totalPages}
-              </span>
-              <button
-                type="button"
-                disabled={page >= totalPages}
-                onClick={() => setPage((current) => current + 1)}
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-100 disabled:opacity-40"
-              >
-                Suivant →
-              </button>
-            </div>
-          )}
-        </>
-      )}
-    </div>
-      </RequireAccount>
+        {!showIncidents && totalPages > 1 && (
+          <div className="flex items-center justify-center gap-3">
+            <button
+              type="button"
+              disabled={page <= 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50 disabled:opacity-40"
+            >
+              ← Précédent
+            </button>
+            <span className="text-sm text-slate-500">
+              Page {page} / {totalPages}
+            </span>
+            <button
+              type="button"
+              disabled={page >= totalPages}
+              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50 disabled:opacity-40"
+            >
+              Suivant →
+            </button>
+          </div>
+        )}
+      </div>
+    </RequireAccount>
+  );
+}
+
+export default function ListingsPage() {
+  return (
+    <Suspense fallback={<Spinner />}>
+      <ListingsContent />
+    </Suspense>
   );
 }

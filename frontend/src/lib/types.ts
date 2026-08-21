@@ -83,6 +83,7 @@ export interface Incident {
   category: IncidentCategory;
   description: string;
   status: IncidentStatus;
+  neighborhood?: string | null;
   createdAt: string;
   updatedAt: string;
   attachments: IncidentAttachment[];
