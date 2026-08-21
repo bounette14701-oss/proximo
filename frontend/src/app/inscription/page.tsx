@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { ErrorMessage } from '@/components/Feedback';
+import { GoogleButton } from '@/components/GoogleButton';
 import api from '@/lib/api';
 import type { User } from '@/lib/types';
 
@@ -92,7 +93,15 @@ function InscriptionForm() {
             : 'Entraide et partage de proximité 🤝'}
         </p>
 
-        <form onSubmit={(event) => void handleSubmit(event)} className="mt-6 space-y-4">
+        <GoogleButton label="S'inscrire avec Google" />
+
+        <div className="my-5 flex items-center gap-3 text-xs text-slate-400">
+          <span className="h-px flex-1 bg-slate-200" />
+          ou créer un compte par email
+          <span className="h-px flex-1 bg-slate-200" />
+        </div>
+
+        <form onSubmit={(event) => void handleSubmit(event)} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <input
               type="text"
