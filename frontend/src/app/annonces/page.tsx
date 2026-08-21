@@ -69,9 +69,14 @@ function ListingsContent() {
           params.set('lng', String(location.lng));
           params.set('radiusKm', String(radiusKm));
         }
-        const data = await api<ListingPage>(`/listings?${params.toString()}`);
-        setListings(data.items);
-        setTotal(data.total);
+        // « Toutes les catégories » : annonces + signalements mélangés.
+        const [listingsData, incidentsData] = await Promise.all([
+          api<ListingPage>(`/listings?${params.toString()}`),
+          category === '' ? api<{ incidents: Incident[] }>('/incidents').catch(() => null) : Promise.resolve(null),
+        ]);
+        setListings(listingsData.items);
+        setIncidents(incidentsData?.incidents ?? []);
+        setTotal(listingsData.total + (incidentsData?.incidents.length ?? 0));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de chargement');
@@ -130,6 +135,63 @@ function ListingsContent() {
   };
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  /** Carte de signalement (réutilisée en filtre « Signalements » et en fil « Toutes »). */
+  const renderIncident = (incident: Incident) => (
+    <li key={incident.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-semibold text-slate-900">{incident.title}</p>
+          <p className="mt-0.5 text-sm text-slate-500">
+            {INCIDENT_CATEGORY_LABELS[incident.category]} · 📍{' '}
+            {incident.neighborhood || 'Non précisée'}
+          </p>
+        </div>
+        <span
+          className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
+            incident.status === 'OPEN'
+              ? 'bg-amber-100 text-amber-700'
+              : incident.status === 'IN_PROGRESS'
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-green-100 text-green-700'
+          }`}
+        >
+          {INCIDENT_STATUS_LABELS[incident.status]}
+        </span>
+      </div>
+      <p className="mt-2 line-clamp-2 text-sm text-slate-600">{incident.description}</p>
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <p className="text-xs text-slate-400">
+          {new Date(incident.createdAt).toLocaleDateString('fr-FR')} ·{' '}
+          {incident.attachments?.length
+            ? `${incident.attachments.length} pièce(s) jointe(s)`
+            : 'sans pièce jointe'}
+        </p>
+        {incident.status !== 'RESOLVED' && (
+          <button
+            type="button"
+            onClick={() => {
+              if (!window.confirm(`Marquer « ${incident.title} » comme traité ?`)) return;
+              api(`/incidents/${incident.id}/resolve`, { method: 'PATCH' })
+                .then(() => {
+                  setIncidents((current) =>
+                    current.map((item) =>
+                      item.id === incident.id ? { ...item, status: 'RESOLVED' } : item,
+                    ),
+                  );
+                })
+                .catch((err) =>
+                  setError(err instanceof Error ? err.message : 'Action impossible'),
+                );
+            }}
+            className="rounded-lg border border-green-200 px-2.5 py-1 text-xs font-semibold text-green-700 hover:bg-green-50"
+          >
+            ✅ Marquer comme traité
+          </button>
+        )}
+      </div>
+    </li>
+  );
 
   return (
     <RequireAccount>
@@ -246,52 +308,31 @@ function ListingsContent() {
             </p>
           ) : (
             <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {incidents.map((incident) => (
-                <li
-                  key={incident.id}
-                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-slate-900">{incident.title}</p>
-                      <p className="mt-0.5 text-sm text-slate-500">
-                        {INCIDENT_CATEGORY_LABELS[incident.category]} · 📍{' '}
-                        {incident.neighborhood || 'Non précisée'}
-                      </p>
-                    </div>
-                    <span
-                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        incident.status === 'OPEN'
-                          ? 'bg-amber-100 text-amber-700'
-                          : incident.status === 'IN_PROGRESS'
-                            ? 'bg-blue-100 text-blue-700'
-                            : 'bg-green-100 text-green-700'
-                      }`}
-                    >
-                      {INCIDENT_STATUS_LABELS[incident.status]}
-                    </span>
-                  </div>
-                  <p className="mt-2 line-clamp-2 text-sm text-slate-600">{incident.description}</p>
-                  <p className="mt-2 text-xs text-slate-400">
-                    {new Date(incident.createdAt).toLocaleDateString('fr-FR')} ·{' '}
-                    {incident.attachments?.length
-                      ? `${incident.attachments.length} pièce(s) jointe(s)`
-                      : 'sans pièce jointe'}
-                  </p>
-                </li>
-              ))}
+              {incidents.map(renderIncident)}
             </ul>
           )
-        ) : listings.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-slate-300 bg-white/60 p-8 text-center text-sm text-slate-500">
-            Aucune annonce pour le moment.
-          </p>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {listings.map((listing) => (
-              <ListingCard key={listing.id} listing={listing} />
-            ))}
-          </div>
+          <>
+            {incidents.length > 0 && (
+              <section className="space-y-3">
+                <h2 className="text-lg font-bold text-slate-900">🛠️ Signalements récents</h2>
+                <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {incidents.map(renderIncident)}
+                </ul>
+              </section>
+            )}
+            {listings.length === 0 && incidents.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-slate-300 bg-white/60 p-8 text-center text-sm text-slate-500">
+                Rien dans la résidence pour le moment.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {listings.map((listing) => (
+                  <ListingCard key={listing.id} listing={listing} />
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         {!showIncidents && totalPages > 1 && (
