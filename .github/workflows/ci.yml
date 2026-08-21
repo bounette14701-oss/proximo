@@ -35,15 +35,18 @@ jobs:
         run: npm install -g npm@10.8.2
 
       - name: Installer les dépendances
-        # Résilience : IPv4 forcé + retries renforcés + nouvelle tentative.
+        # Résilience : cache npm local frais + IPv4 + retries + retry
+        # (bug npm "Exit handler never called!" sur les runners GitHub).
         env:
           NODE_OPTIONS: --dns-result-order=ipv4first
         run: |
-          npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 \
-            || { sleep 10; npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000; }
+          npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 --cache /tmp/npm-cache \
+            || { sleep 10; npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 --cache /tmp/npm-cache; }
 
       - name: Générer le client Prisma
-        run: npx prisma generate
+        # Version épinglée : si npm ci a échoué partiellement, npx ne doit
+        # jamais installer prisma@latest (7.x rejette le schéma v5).
+        run: npx prisma@5.22.0 generate
 
       - name: Lint
         run: npm run lint
@@ -73,12 +76,13 @@ jobs:
         run: npm install -g npm@10.8.2
 
       - name: Installer les dépendances
-        # Résilience : IPv4 forcé + retries renforcés + nouvelle tentative.
+        # Résilience : cache npm local frais + IPv4 + retries + retry
+        # (bug npm "Exit handler never called!" sur les runners GitHub).
         env:
           NODE_OPTIONS: --dns-result-order=ipv4first
         run: |
-          npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 \
-            || { sleep 10; npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000; }
+          npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 --cache /tmp/npm-cache \
+            || { sleep 10; npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 --cache /tmp/npm-cache; }
 
       - name: Lint
         run: npm run lint
