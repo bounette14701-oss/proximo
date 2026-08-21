@@ -16,6 +16,7 @@ export enum ListingCategory {
   TOOL = 'TOOL', // Prêt de matériel / outillage
   SERVICE = 'SERVICE', // Service entre voisins (aide déménagement, garde…)
   DONATION = 'DONATION', // Don d'objets
+  NOTICE = 'NOTICE', // Avis aux résidents (colis reçu, fête, travaux…)
   OTHER = 'OTHER', // Autre
 }
 

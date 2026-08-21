@@ -137,6 +137,31 @@ export class AdminController {
     return { incident };
   }
 
+  // ─── Annonces (modération) ─────────────────────────────────
+
+  @Get('listings')
+  async listListings(@Query('status') status?: string) {
+    const listings = await this.prisma.listing.findMany({
+      where: status ? { status } : undefined,
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      include: {
+        owner: { select: { id: true, firstName: true, lastName: true, email: true } },
+      },
+    });
+    return { listings };
+  }
+
+  @Delete('listings/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteListing(@Param('id', ParseUUIDPipe) id: string) {
+    const listing = await this.prisma.listing.findUnique({ where: { id } });
+    if (!listing) {
+      throw new BadRequestException('Annonce introuvable');
+    }
+    await this.prisma.listing.delete({ where: { id } });
+  }
+
   // ─── Réglages syndic / agence ────────────────────────────────
 
   @Get('settings')
@@ -173,5 +198,27 @@ export class AdminController {
   async listInvitations() {
     const invitations = await this.invitationsService.listAll();
     return { invitations };
+  }
+
+  // ─── Vue d'ensemble (stats) ─────────────────────────────────
+
+  @Get('stats')
+  async stats() {
+    const [members, pending, incidents, incidentsOpen, invitations] = await Promise.all([
+      this.prisma.user.count(),
+      this.prisma.user.count({ where: { status: 'PENDING' } }),
+      this.prisma.incident.count(),
+      this.prisma.incident.count({ where: { status: 'OPEN' } }),
+      this.prisma.invitation.count({ where: { usedAt: null, expiresAt: { gt: new Date() } } }),
+    ]);
+    return {
+      stats: {
+        members,
+        pending,
+        incidents,
+        incidentsOpen,
+        invitationsActive: invitations,
+      },
+    };
   }
 }

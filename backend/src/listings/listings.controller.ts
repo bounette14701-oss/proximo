@@ -46,7 +46,8 @@ export class ListingsController {
   @Get(':id')
   @Throttle({ default: { limit: 60, ttl: 60_000 } })
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.listingsService.findOne(id);
+    const listing = await this.listingsService.findOne(id);
+    return { listing };
   }
 
   @Post()

@@ -7,15 +7,26 @@ import api from '@/lib/api';
 import {
   INCIDENT_CATEGORY_LABELS,
   INCIDENT_STATUS_LABELS,
+  STATUS_LABELS,
   USER_STATUS_LABELS,
   type AdminUser,
   type Incident,
   type IncidentStatus,
   type Invitation,
+  type Listing,
   type SyndicSettings,
 } from '@/lib/types';
 
-type Tab = 'users' | 'incidents' | 'invitations' | 'settings';
+type Tab = 'stats' | 'users' | 'listings' | 'incidents' | 'invitations' | 'settings';
+
+/** Statistiques globales du back-office. */
+interface AdminStats {
+  members: number;
+  pending: number;
+  incidents: number;
+  incidentsOpen: number;
+  invitationsActive: number;
+}
 
 /**
  * Back-office administrateur (2FA obligatoire, vérifiée par l'API) :
@@ -26,13 +37,20 @@ type Tab = 'users' | 'incidents' | 'invitations' | 'settings';
  */
 export default function AdminPage() {
   const { isAdmin, user } = useAuth();
-  const [tab, setTab] = useState<Tab>('users');
+  const [tab, setTab] = useState<Tab>('stats');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Statistiques
+  const [stats, setStats] = useState<AdminStats | null>(null);
 
   // Utilisateurs
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+
+  // Annonces (modération)
+  const [listings, setListings] = useState<Listing[] | null>(null);
 
   // Signalements
   const [incidents, setIncidents] = useState<Incident[] | null>(null);
@@ -48,10 +66,13 @@ export default function AdminPage() {
   const [syndicEmail, setSyndicEmail] = useState('');
 
   const loadUsers = useCallback(() => {
-    api<{ users: AdminUser[] }>(`/admin/users?search=${encodeURIComponent(search)}`)
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (statusFilter) params.set('status', statusFilter);
+    api<{ users: AdminUser[] }>(`/admin/users?${params.toString()}`)
       .then((data) => setUsers(data.users))
       .catch(() => setUsers([]));
-  }, [search]);
+  }, [search, statusFilter]);
 
   const loadIncidents = useCallback(() => {
     api<{ incidents: Incident[] }>('/admin/incidents')
@@ -65,6 +86,18 @@ export default function AdminPage() {
       .catch(() => setInvitations([]));
   }, []);
 
+  const loadStats = useCallback(() => {
+    api<{ stats: AdminStats }>('/admin/stats')
+      .then((data) => setStats(data.stats))
+      .catch(() => setStats(null));
+  }, []);
+
+  const loadListings = useCallback(() => {
+    api<{ listings: Listing[] }>('/admin/listings')
+      .then((data) => setListings(data.listings))
+      .catch(() => setListings([]));
+  }, []);
+
   const loadSettings = useCallback(() => {
     api<{ settings: SyndicSettings }>('/admin/settings')
       .then((data) => {
@@ -76,11 +109,13 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
+    loadStats();
     if (tab === 'users') loadUsers();
+    if (tab === 'listings') loadListings();
     if (tab === 'incidents') loadIncidents();
     if (tab === 'invitations') loadInvitations();
     if (tab === 'settings') loadSettings();
-  }, [tab, loadUsers, loadIncidents, loadInvitations, loadSettings]);
+  }, [tab, loadStats, loadUsers, loadListings, loadIncidents, loadInvitations, loadSettings]);
 
   if (!isAdmin) {
     return (
@@ -173,8 +208,14 @@ export default function AdminPage() {
       </p>
 
       <div className="mt-6 flex gap-2">
+        <button type="button" className={tabClass('stats')} onClick={() => setTab('stats')}>
+          📊 Vue d&apos;ensemble
+        </button>
         <button type="button" className={tabClass('users')} onClick={() => setTab('users')}>
           👥 Membres
+        </button>
+        <button type="button" className={tabClass('listings')} onClick={() => setTab('listings')}>
+          📦 Annonces
         </button>
         <button type="button" className={tabClass('incidents')} onClick={() => setTab('incidents')}>
           🛠️ Signalements
@@ -190,16 +231,76 @@ export default function AdminPage() {
       <ErrorMessage message={error} />
       {success && <p className="mt-3 text-sm font-medium text-brand-600">{success}</p>}
 
+      {/* ─── Vue d'ensemble ─────────────────────────────────── */}
+      {tab === 'stats' && (
+        <section className="mt-6">
+          {!stats ? (
+            <Spinner />
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+              {[
+                { label: 'Membres', value: stats.members, icon: '👥' },
+                { label: 'En attente', value: stats.pending, icon: '⏳' },
+                { label: 'Signalements', value: stats.incidents, icon: '🛠️' },
+                { label: 'Ouverts', value: stats.incidentsOpen, icon: '🟡' },
+                { label: 'Invitations actives', value: stats.invitationsActive, icon: '📲' },
+              ].map((card) => (
+                <button
+                  key={card.label}
+                  type="button"
+                  onClick={() => {
+                    if (card.label === 'Membres' || card.label === 'En attente') setTab('users');
+                    if (card.label === 'Signalements' || card.label === 'Ouverts') setTab('incidents');
+                    if (card.label === 'Invitations actives') setTab('invitations');
+                  }}
+                  className="rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-brand-300"
+                >
+                  <span className="text-2xl">{card.icon}</span>
+                  <p className="mt-2 text-2xl font-bold text-slate-900">{card.value}</p>
+                  <p className="text-xs font-medium text-slate-500">{card.label}</p>
+                </button>
+              ))}
+            </div>
+          )}
+          <p className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white/60 p-5 text-sm text-slate-500">
+            Actions rapides :{' '}
+            <button type="button" onClick={() => setTab('users')} className="font-medium text-brand-600 hover:underline">
+              valider les membres en attente
+            </button>
+            {' · '}
+            <button type="button" onClick={() => setTab('invitations')} className="font-medium text-brand-600 hover:underline">
+              générer une invitation QR
+            </button>
+            {' · '}
+            <button type="button" onClick={() => setTab('settings')} className="font-medium text-brand-600 hover:underline">
+              configurer le syndic
+            </button>
+          </p>
+        </section>
+      )}
+
       {/* ─── Membres ─────────────────────────────────────────── */}
       {tab === 'users' && (
         <section className="mt-6">
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Rechercher par nom ou email…"
-            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-brand-500 focus:outline-none"
-          />
+          <div className="flex flex-wrap gap-2">
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Rechercher par nom ou email…"
+              className="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 focus:border-brand-500 focus:outline-none"
+            />
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              className="rounded-lg border border-slate-300 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
+            >
+              <option value="">Tous les statuts</option>
+              <option value="PENDING">En attente</option>
+              <option value="ACTIVE">Actifs</option>
+              <option value="SUSPENDED">Suspendus</option>
+            </select>
+          </div>
           {!users ? (
             <Spinner />
           ) : (
@@ -270,6 +371,65 @@ export default function AdminPage() {
               {users.length === 0 && (
                 <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
                   Aucun membre trouvé.
+                </p>
+              )}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {/* ─── Annonces (modération) ─────────────────────────── */}
+      {tab === 'listings' && (
+        <section className="mt-6">
+          {!listings ? (
+            <Spinner />
+          ) : (
+            <ul className="space-y-3">
+              {listings.map((listing) => (
+                <li
+                  key={listing.id}
+                  className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-slate-900">
+                        {listing.title}
+                        <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                          {STATUS_LABELS[listing.status]}
+                        </span>
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        {listing.owner.firstName} · 📍 {listing.neighborhood}
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        {new Date(listing.createdAt).toLocaleDateString('fr-FR')}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!window.confirm(`Supprimer l'annonce « ${listing.title} » ?`)) return;
+                        api(`/admin/listings/${listing.id}`, { method: 'DELETE' })
+                          .then(() => {
+                            setListings((current) =>
+                              (current ?? []).filter((item) => item.id !== listing.id),
+                            );
+                            setSuccess('Annonce supprimée.');
+                          })
+                          .catch((err) =>
+                            setError(err instanceof Error ? err.message : 'Suppression impossible'),
+                          );
+                      }}
+                      className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+                    >
+                      Supprimer
+                    </button>
+                  </div>
+                </li>
+              ))}
+              {listings.length === 0 && (
+                <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+                  Aucune annonce.
                 </p>
               )}
             </ul>

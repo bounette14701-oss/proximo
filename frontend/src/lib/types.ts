@@ -18,7 +18,7 @@ export interface User {
   createdAt?: string;
 }
 
-export type ListingCategory = 'TOOL' | 'SERVICE' | 'DONATION' | 'OTHER';
+export type ListingCategory = 'TOOL' | 'SERVICE' | 'DONATION' | 'NOTICE' | 'OTHER';
 export type ListingStatus = 'OPEN' | 'RESERVED' | 'CLOSED';
 
 export interface ListingOwner {
@@ -128,6 +128,7 @@ export const CATEGORY_LABELS: Record<ListingCategory, string> = {
   TOOL: 'Prêt de matériel',
   SERVICE: 'Service entre voisins',
   DONATION: 'Don',
+  NOTICE: 'Avis aux résidents',
   OTHER: 'Autre',
 };
 
@@ -135,6 +136,7 @@ export const CATEGORY_EMOJI: Record<ListingCategory, string> = {
   TOOL: '🔧',
   SERVICE: '🤝',
   DONATION: '🎁',
+  NOTICE: '📢',
   OTHER: '📦',
 };
 

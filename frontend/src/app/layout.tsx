@@ -7,6 +7,9 @@ export const metadata: Metadata = {
   title: 'Proximo — La vie de votre résidence',
   description:
     "Plateforme open source de vie de résidence : annonces entre voisins, signalements au syndic, invitations de voisinage. Connectez votre immeuble.",
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -1,9 +1,9 @@
 # 🤝 Proximo
 
-**Plateforme web open source d'entraide et de partage de proximité.**
+**Plateforme open source de vie de résidence : annonces entre voisins, signalements au syndic, invitations de voisinage.**
 
 Prêtez un outil, proposez un service, donnez ce qui vous encombre — Proximo
-met en relation les voisins d'un même quartier, **sans jamais révéler
+met en relation les habitants d'une même résidence, **sans jamais révéler
 d'adresse exacte**.
 
 [![Licence](https://img.shields.io/github/license/bounette14701-oss/proximo)](LICENSE)
@@ -26,10 +26,10 @@ d'adresse exacte**.
 | **Périmètre géographique** | Recherche dans un rayon de 1 à 100 km, tri par distance (PostGIS) |
 | **Modération des membres** | Nouveaux comptes en attente (`PENDING`) jusqu'à validation par un admin (sauf emails déclarés administrateurs) ; suspension et suppression depuis le back-office |
 | **Signalements syndic** | Formulaire d'incident (fuite d'eau, ascenseur, dégradation…) avec pièces jointes (JPG/PNG/WEBP/PDF, 5 Mo), email récapitulatif automatique au syndic, suivi du statut (ouvert / en cours / résolu) |
-| **Invitations par QR code** | Lien d'invitation lié au quartier, usage unique et expirable (72 h), page d'atterrissage avec pré-remplissage du périmètre |
+| **Invitations par QR code** | Lien d'invitation lié à la résidence, usage unique et expirable (72 h), page d'atterrissage avec pré-remplissage du périmètre |
 | **Notifications email** | Nodemailer/SMTP : bienvenue, nouveau message, changement de statut d'un signalement — activables/désactivables dans les réglages |
 | **Back-office admin** | Validation/suspension/suppression des membres, modération des signalements, configuration de l'email du syndic, génération d'invitations + QR |
-| **Vie privée** | L'adresse exacte et les coordonnées ne sont **jamais** exposées : seul le quartier et la distance sont publics |
+| **Vie privée** | L'adresse exacte et les coordonnées ne sont **jamais** exposées : seule la résidence et la distance sont publics |
 
 ## 🧱 Stack technique
 
@@ -122,8 +122,8 @@ Toutes les routes sont préfixées par `/api`.
 | POST | `/auth/refresh` | cookie refresh | Rotation de session |
 | POST | `/auth/logout` | cookie refresh | Déconnexion + révocation |
 | GET | `/auth/me` | connecté | Utilisateur courant |
-| GET | `/listings` | public | Recherche (catégorie, texte, rayon km, pagination) |
-| GET | `/listings/:id` | public | Détail (quartier uniquement, pas d'adresse) |
+| GET | `/listings` | compte validé | Recherche (catégorie, texte, rayon km, pagination) |
+| GET | `/listings/:id` | compte validé | Détail (résidence uniquement, pas d'adresse) |
 | POST | `/listings` | connecté | Créer une annonce (adresse → géocodage) |
 | PATCH | `/listings/:id` | propriétaire | Modifier / changer le statut |
 | DELETE | `/listings/:id` | propriétaire | Supprimer |
