@@ -32,7 +32,12 @@ jobs:
           cache-dependency-path: backend/package-lock.json
 
       - name: Installer les dépendances
-        run: npm ci
+        # Retries npm renforcés + nouvelle tentative : le registry npm est
+        # sporadiquement instable depuis les runners partagés (bug npm "Exit
+        # handler never called!").
+        run: |
+          npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 \
+            || npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000
 
       - name: Générer le client Prisma
         run: npx prisma generate
@@ -62,7 +67,10 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Installer les dépendances
-        run: npm ci
+        # Retries npm renforcés + nouvelle tentative (registry sporadiquement instable).
+        run: |
+          npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 \
+            || npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000
 
       - name: Lint
         run: npm run lint
