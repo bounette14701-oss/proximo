@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { Incident, IncidentAttachment } from '@prisma/client';
 import { mkdir, unlink } from 'fs/promises';
 import { join } from 'path';
@@ -18,11 +18,87 @@ export function uploadsDir(): string {
  * la base ne conserve que les métadonnées (nom original, type MIME, taille).
  */
 @Injectable()
-export class IncidentsService {
+export class IncidentsService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(IncidentsService.name);
+  private purgeTimer: ReturnType<typeof setInterval> | null = null;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
   ) {}
+
+  /** Purge automatique : les signalements « traités » sont supprimés après 48 h. */
+  onModuleInit(): void {
+    this.purgeTimer = setInterval(() => {
+      void this.purgeResolved().catch((error) =>
+        this.logger.error(`Purge des signalements : ${String(error)}`),
+      );
+    }, 60 * 60 * 1000); // toutes les heures
+    void this.purgeResolved();
+  }
+
+  onModuleDestroy(): void {
+    if (this.purgeTimer) clearInterval(this.purgeTimer);
+  }
+
+  private async purgeResolved(): Promise<void> {
+    const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
+    const stale = await this.prisma.incident.findMany({
+      where: { status: 'RESOLVED', updatedAt: { lt: cutoff } },
+      include: { attachments: true },
+    });
+    if (stale.length === 0) return;
+    for (const incident of stale) {
+      for (const attachment of incident.attachments) {
+        await this.removeUploadedFile(attachment.path.split('/').pop() ?? attachment.path);
+      }
+    }
+    await this.prisma.incident.deleteMany({
+      where: { id: { in: stale.map((incident) => incident.id) } },
+    });
+    this.logger.log(`Purge de ${stale.length} signalement(s) traités (> 48 h)`);
+  }
+
+  /** Marque un signalement comme traité (n'importe quel résident ACTIVE). */
+  async resolve(incidentId: string): Promise<Incident> {
+    const incident = await this.prisma.incident.findUnique({ where: { id: incidentId } });
+    if (!incident) {
+      throw new NotFoundException('Signalement introuvable');
+    }
+    const updated = await this.prisma.incident.update({
+      where: { id: incidentId },
+      data: { status: 'RESOLVED' },
+    });
+    // L'auteur est prévenu (si l'émetteur du statut est quelqu'un d'autre).
+    const author = await this.prisma.user.findUnique({
+      where: { id: incident.userId },
+      select: { email: true, emailNotifications: true },
+    });
+    if (author?.emailNotifications) {
+      await this.emailService.sendIncidentStatusUpdate(
+        author.email,
+        incident.title,
+        'RESOLVED',
+        'Signalement marqué comme traité par un résident.',
+      );
+    }
+    return updated;
+  }
+
+  /** Suppression par un administrateur (fichiers joints nettoyés). */
+  async adminRemove(incidentId: string): Promise<void> {
+    const incident = await this.prisma.incident.findUnique({
+      where: { id: incidentId },
+      include: { attachments: true },
+    });
+    if (!incident) {
+      throw new NotFoundException('Signalement introuvable');
+    }
+    for (const attachment of incident.attachments) {
+      await this.removeUploadedFile(attachment.path.split('/').pop() ?? attachment.path);
+    }
+    await this.prisma.incident.delete({ where: { id: incidentId } });
+  }
 
   /** Crée un signalement + pièces jointes, puis prévient le syndic par email. */
   async create(
@@ -178,6 +254,7 @@ export class IncidentsService {
       },
       reporter,
       attachments.map((a) => ({ filename: a.filename, mimeType: a.mimeType })),
+      settings?.residenceName,
     );
   }
 }

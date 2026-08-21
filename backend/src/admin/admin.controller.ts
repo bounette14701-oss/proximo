@@ -168,7 +168,7 @@ export class AdminController {
   async getSettings() {
     const settings = await this.prisma.syndicSettings.upsert({
       where: { id: 1 },
-      create: { id: 1 },
+      create: { id: 1, agencyName: 'Agence de gestion', email: '' },
       update: {},
     });
     return { settings };
@@ -181,15 +181,25 @@ export class AdminController {
       where: { id: 1 },
       create: {
         id: 1,
-        ...(dto.agencyName ? { agencyName: dto.agencyName } : {}),
-        ...(dto.email ? { email: dto.email } : {}),
+        agencyName: dto.agencyName ?? 'Agence de gestion',
+        email: dto.email ?? '',
+        ...(dto.residenceName !== undefined ? { residenceName: dto.residenceName } : {}),
       },
       update: {
         ...(dto.agencyName !== undefined ? { agencyName: dto.agencyName } : {}),
         ...(dto.email !== undefined ? { email: dto.email } : {}),
+        ...(dto.residenceName !== undefined ? { residenceName: dto.residenceName } : {}),
       },
     });
     return { settings };
+  }
+
+  // ─── Signalements (modération) ─────────────────────────────
+
+  @Delete('incidents/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteIncident(@Param('id', ParseUUIDPipe) id: string) {
+    await this.incidentsService.adminRemove(id);
   }
 
   // ─── Invitations ─────────────────────────────────────────────

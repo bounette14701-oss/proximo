@@ -36,6 +36,7 @@ export interface PublicUser {
   firstName: string;
   lastName: string;
   neighborhood: string | null;
+  residenceName: string | null;
   role: string;
   status: string;
   totpEnabled: boolean;
@@ -107,7 +108,7 @@ export class AuthService {
 
     await this.emailService.sendWelcome(email, user.firstName);
 
-    return { user: this.toPublicUser(user) };
+    return { user: await this.toPublicUserWithResidence(user) };
   }
 
   async login(dto: LoginDto): Promise<{ user: PublicUser }> {
@@ -286,22 +287,75 @@ export class AuthService {
   }
 
   async toPublicUserOrThrow(userId: string): Promise<PublicUser> {
-    return this.findById(userId);
+    const user = await this.findById(userId);
+    return this.toPublicUserWithResidence(user);
   }
 
-  toPublicUser(user: User): PublicUser {
+  /** Champs utilisateur nécessaires à la représentation publique. */
+  private userShape(user: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    neighborhood: string | null;
+    role: string;
+    status: string;
+    totpEnabled: boolean;
+    emailNotifications: boolean;
+    createdAt: Date;
+  }): PublicUser {
     return {
       id: user.id,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
       neighborhood: user.neighborhood,
+      residenceName: null,
       role: user.role,
       status: user.status,
       totpEnabled: user.totpEnabled,
       emailNotifications: user.emailNotifications,
       createdAt: user.createdAt,
     };
+  }
+
+  toPublicUser(user: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    neighborhood: string | null;
+    role: string;
+    status: string;
+    totpEnabled: boolean;
+    emailNotifications: boolean;
+    createdAt: Date;
+  }, residenceName?: string | null): PublicUser {
+    return {
+      ...this.userShape(user),
+      residenceName: residenceName ?? user.neighborhood ?? null,
+    };
+  }
+
+  /** Nom de la résidence configuré (settings singleton), avec repli sur le user. */
+  async toPublicUserWithResidence(user: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    neighborhood: string | null;
+    role: string;
+    status: string;
+    totpEnabled: boolean;
+    emailNotifications: boolean;
+    createdAt: Date;
+  }): Promise<PublicUser> {
+    try {
+      const settings = await this.prisma.syndicSettings.findUnique({ where: { id: 1 } });
+      return this.toPublicUser(user, settings?.residenceName ?? user.neighborhood);
+    } catch {
+      return this.toPublicUser(user);
+    }
   }
 
   /**

@@ -73,9 +73,9 @@ export function Navbar() {
               🤝
             </span>
             Proximo
-            {user?.neighborhood && (
+            {user?.residenceName && (
               <span className="hidden rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700 sm:inline">
-                {user.neighborhood}
+                {user.residenceName}
               </span>
             )}
           </Link>

@@ -24,7 +24,7 @@ export default function InviterPage() {
     try {
       const data = await api<Invitation>('/invitations', {
         method: 'POST',
-        body: JSON.stringify({ neighborhood: user?.neighborhood ?? '', expiresInHours: 72 }),
+        body: JSON.stringify({ neighborhood: user?.residenceName ?? user?.neighborhood ?? '', expiresInHours: 72 }),
       });
       setInvitation(data);
     } catch (err) {
@@ -40,7 +40,7 @@ export default function InviterPage() {
       <h1 className="text-2xl font-bold text-slate-900">Inviter un voisin</h1>
       <p className="mt-1 text-sm text-slate-600">
         Générez un lien d&apos;invitation pour{' '}
-        <strong>{user?.neighborhood ?? 'votre résidence'}</strong> — partagez-le
+        <strong>{user?.residenceName ?? user?.neighborhood ?? 'votre résidence'}</strong> — partagez-le
         par message, ou imprimez le QR code pour l&apos;afficher dans les parties
         communes.
       </p>

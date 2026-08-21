@@ -29,6 +29,7 @@ export interface ListingResponse {
   category: string;
   status: string;
   neighborhood: string;
+  residenceName?: string | null;
   distanceKm?: number;
   isOwner: boolean;
   createdAt: Date;
@@ -90,7 +91,11 @@ export function buildListingWhere(query: {
 /**
  * Transforme une ligne brute en réponse publique (masque les données privées).
  */
-export function toListingResponse(row: RawListingRow, viewerId?: string): ListingResponse {
+export function toListingResponse(
+  row: RawListingRow,
+  viewerId?: string,
+  residenceName?: string | null,
+): ListingResponse {
   const distanceMeters = row.distanceMeters;
   return {
     id: row.id,
@@ -99,6 +104,7 @@ export function toListingResponse(row: RawListingRow, viewerId?: string): Listin
     category: row.category,
     status: row.status,
     neighborhood: row.neighborhood,
+    residenceName: residenceName ?? row.neighborhood ?? null,
     distanceKm: distanceMeters != null ? Math.round((distanceMeters / 1000) * 10) / 10 : undefined,
     isOwner: viewerId != null && viewerId === row.ownerId,
     createdAt: row.createdAt,

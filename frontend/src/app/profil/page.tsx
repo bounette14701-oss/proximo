@@ -307,7 +307,7 @@ export default function ProfilPage() {
                     {CATEGORY_EMOJI[listing.category]} {listing.title}
                   </p>
                   <p className="text-xs text-slate-400">
-                    {CATEGORY_LABELS[listing.category]} · {listing.neighborhood} ·{' '}
+                    {CATEGORY_LABELS[listing.category]} · {listing.residenceName ?? listing.neighborhood} ·{' '}
                     {STATUS_LABELS[listing.status]}
                   </p>
                 </div>

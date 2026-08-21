@@ -24,7 +24,7 @@ export default function HomePage() {
           <>
             <p className="text-sm font-medium text-brand-100">Votre résidence</p>
             <h1 className="mt-1 text-2xl font-bold sm:text-3xl">
-              {user.neighborhood ?? 'Rejoignez votre résidence'}
+              {user.residenceName ?? 'Rejoignez votre résidence'}
             </h1>
             <p className="mt-2 max-w-xl text-sm text-brand-50">
               Annonces entre voisins, signalements au syndic, invités — tout ce

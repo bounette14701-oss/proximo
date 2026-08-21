@@ -131,6 +131,7 @@ export class EmailService implements OnModuleInit {
     incident: { title: string; category: string; description: string; neighborhood?: string | null },
     author: { firstName: string; lastName: string; email: string },
     attachments: { filename: string; mimeType: string }[],
+    residenceName?: string | null,
   ): Promise<void> {
     const labels: Record<string, string> = {
       WATER_LEAK: 'Fuite d’eau',
@@ -143,6 +144,7 @@ export class EmailService implements OnModuleInit {
       `[Proximo] Signalement : ${incident.title}`,
       `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto">
         <h2 style="color:#237a49">🛠️ Nouveau signalement</h2>
+        ${residenceName ? `<p style="color:#64748b;font-size:13px">Résidence : <strong>${this.escape(residenceName)}</strong></p>` : ''}
         <table style="width:100%;border-collapse:collapse;font-size:14px">
           <tr><td style="padding:4px 0;color:#64748b">Type</td>
               <td style="padding:4px 0"><strong>${labels[incident.category] ?? incident.category}</strong></td></tr>
@@ -153,7 +155,6 @@ export class EmailService implements OnModuleInit {
           ${attachments.length ? `<tr><td style="padding:4px 0;color:#64748b">Pièces jointes</td><td style="padding:4px 0">${attachments.map((a) => this.escape(a.filename)).join(', ')}</td></tr>` : ''}
         </table>
         <p style="margin-top:12px;white-space:pre-line">${this.escape(incident.description)}</p>
-        <p><a href="${this.appUrl()}/admin" style="color:#237a49">Gérer dans le back-office →</a></p>
       </div>`,
     );
   }

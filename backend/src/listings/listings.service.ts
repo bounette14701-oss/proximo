@@ -50,8 +50,19 @@ export class ListingsService {
     private readonly geocoding: GeocodingService,
   ) {}
 
+  /** Nom de résidence configuré (settings singleton) — repli silencieux. */
+  private async getResidenceName(): Promise<string | null> {
+    try {
+      const settings = await this.prisma.syndicSettings.findUnique({ where: { id: 1 } });
+      return settings?.residenceName ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   /** Annonces de l'utilisateur (profil). */
   async findMine(userId: string): Promise<ListingResponse[]> {
+    const residenceName = await this.getResidenceName();
     const rows = await this.prisma.$queryRaw<RawListingRow[]>`
       SELECT l.id, l.title, l.description, l.category, l.status, l.neighborhood,
              l."createdAt", l."ownerId",
@@ -61,7 +72,7 @@ export class ListingsService {
       WHERE l."ownerId" = ${userId}
       ORDER BY l."createdAt" DESC
     `;
-    return rows.map((row) => toListingResponse(row));
+    return rows.map((row) => toListingResponse(row, undefined, residenceName));
   }
 
   /** Crée une annonce pour l'utilisateur connecté. */
@@ -130,8 +141,9 @@ export class ListingsService {
     );
     const total = Number(totalRows[0]?.count ?? 0);
 
+    const residenceName = await this.getResidenceName();
     return {
-      items: rows.map((row) => toListingResponse(row, viewerId)),
+      items: rows.map((row) => toListingResponse(row, viewerId, residenceName)),
       total,
       page,
       limit,
@@ -153,7 +165,8 @@ export class ListingsService {
     if (!row) {
       throw new NotFoundException('Annonce introuvable');
     }
-    return toListingResponse(row, viewerId);
+    const residenceName = await this.getResidenceName();
+    return toListingResponse(row, viewerId, residenceName);
   }
 
   /** Modifie une annonce — propriétaire uniquement. */

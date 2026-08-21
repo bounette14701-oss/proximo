@@ -64,6 +64,7 @@ export default function AdminPage() {
   const [settings, setSettings] = useState<SyndicSettings | null>(null);
   const [agencyName, setAgencyName] = useState('');
   const [syndicEmail, setSyndicEmail] = useState('');
+  const [residenceName, setResidenceName] = useState('');
 
   const loadUsers = useCallback(() => {
     const params = new URLSearchParams();
@@ -104,6 +105,7 @@ export default function AdminPage() {
         setSettings(data.settings);
         setAgencyName(data.settings.agencyName ?? '');
         setSyndicEmail(data.settings.email ?? '');
+        setResidenceName(data.settings.residenceName ?? '');
       })
       .catch(() => setSettings(null));
   }, []);
@@ -186,7 +188,7 @@ export default function AdminPage() {
     try {
       await api('/admin/settings', {
         method: 'PATCH',
-        body: JSON.stringify({ agencyName, email: syndicEmail }),
+        body: JSON.stringify({ agencyName, email: syndicEmail, residenceName }),
       });
       setSuccess('Réglages syndic enregistrés.');
       loadSettings();
@@ -481,6 +483,25 @@ export default function AdminPage() {
                           {INCIDENT_STATUS_LABELS[status]}
                         </button>
                       ))}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!window.confirm(`Supprimer le signalement « ${incident.title} » ?`)) return;
+                          api(`/admin/incidents/${incident.id}`, { method: 'DELETE' })
+                            .then(() => {
+                              setIncidents((current) =>
+                                (current ?? []).filter((item) => item.id !== incident.id),
+                              );
+                              setSuccess('Signalement supprimé.');
+                            })
+                            .catch((err) =>
+                              setError(err instanceof Error ? err.message : 'Suppression impossible'),
+                            );
+                        }}
+                        className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+                      >
+                        Supprimer
+                      </button>
                     </div>
                   </div>
                 </li>
@@ -608,6 +629,22 @@ export default function AdminPage() {
               Les signalements d&apos;incidents sont envoyés à cette adresse.
             </p>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Nom de la résidence
+                </label>
+                <input
+                  type="text"
+                  maxLength={120}
+                  value={residenceName}
+                  onChange={(event) => setResidenceName(event.target.value)}
+                  placeholder="Ex. Résidence Les Cèdres"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
+                />
+                <p className="mt-1 text-xs text-slate-400">
+                  Affiché dans toute l&apos;interface et les emails (en-tête, annonces, invitations).
+                </p>
+              </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">
                   Nom de l&apos;agence

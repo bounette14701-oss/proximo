@@ -137,10 +137,11 @@ model IncidentAttachment {
 
 // ─── Réglages syndic / agence (singleton id=1) ────────────────
 model SyndicSettings {
-  id         Int      @id @default(1)
-  agencyName String   @default("Agence de gestion")
-  email      String   @default("")
-  updatedAt  DateTime @updatedAt
+  id            Int      @id @default(1) // singleton
+  agencyName    String
+  email         String
+  residenceName String? // nom de la résidence affiché dans toute l'interface et les mails
+  updatedAt     DateTime @updatedAt
 }
 
 // ─── Invitation (QR code / lien à usage unique) ───────────────

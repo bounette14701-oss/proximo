@@ -31,7 +31,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
 
       <div className="mt-4 flex items-center justify-between text-xs text-slate-400">
         <span>
-          📍 {listing.neighborhood} · {listing.owner.firstName}
+          📍 {listing.residenceName ?? listing.neighborhood} · {listing.owner.firstName}
         </span>
         <span>{formatRelativeDate(listing.createdAt)}</span>
       </div>

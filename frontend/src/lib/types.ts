@@ -11,11 +11,12 @@ export interface User {
   firstName: string;
   lastName: string;
   neighborhood: string | null;
-  role?: UserRole;
-  status?: UserStatus;
-  totpEnabled?: boolean;
-  emailNotifications?: boolean;
-  createdAt?: string;
+  residenceName: string | null;
+  role: UserRole;
+  status: UserStatus;
+  totpEnabled: boolean;
+  emailNotifications: boolean;
+  createdAt: string;
 }
 
 export type ListingCategory = 'TOOL' | 'SERVICE' | 'DONATION' | 'NOTICE' | 'OTHER';
@@ -34,6 +35,7 @@ export interface Listing {
   category: ListingCategory;
   status: ListingStatus;
   neighborhood: string;
+  residenceName?: string | null;
   distanceKm?: number;
   isOwner: boolean;
   createdAt: string;
@@ -122,6 +124,7 @@ export interface SyndicSettings {
   id: number;
   agencyName: string | null;
   email: string | null;
+  residenceName?: string | null;
   updatedAt: string;
 }
 

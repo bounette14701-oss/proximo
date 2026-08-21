@@ -154,10 +154,6 @@ function NewListingForm() {
         <h1 className="text-2xl font-bold text-slate-900">
           {isIncident ? 'Signaler un incident' : 'Publier dans la résidence'}
         </h1>
-        <p className="text-sm text-slate-500">
-          Tout se publie au même endroit : choisissez la catégorie, le formulaire s&apos;adapte.
-        </p>
-
         <form
           onSubmit={(event) => void handleSubmit(event)}
           className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"

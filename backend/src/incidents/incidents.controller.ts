@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Res,
   UploadedFiles,
@@ -92,9 +93,16 @@ export class IncidentsController {
   }
 
   @Get()
-  async mine(@CurrentUser() user: { id: string }) {
-    const incidents = await this.incidentsService.listMine(user.id);
+  async all(@CurrentUser() user: { id: string; role: string }) {
+    const incidents = await this.incidentsService.listAll();
     return { incidents };
+  }
+
+  @Patch(':id/resolve')
+  @HttpCode(HttpStatus.OK)
+  async resolve(@Param('id', ParseUUIDPipe) id: string) {
+    const incident = await this.incidentsService.resolve(id);
+    return { incident };
   }
 
   @Get(':id')
