@@ -95,16 +95,24 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* ─── Fil des annonces ──────────────────────────────── */}
-      <section>
-        <div className="mb-3 flex items-end justify-between">
-          <h2 className="text-lg font-bold text-slate-900">Dernières annonces</h2>
-          <Link href="/annonces" className="text-sm font-medium text-brand-600 hover:underline">
-            Tout voir →
-          </Link>
-        </div>
-        <LatestListings />
-      </section>
+      {/* ─── Fil des annonces (réservé aux membres validés) ── */}
+      {user?.status === 'ACTIVE' && (
+        <section>
+          <div className="mb-3 flex items-end justify-between">
+            <h2 className="text-lg font-bold text-slate-900">Dernières annonces</h2>
+            <Link href="/annonces" className="text-sm font-medium text-brand-600 hover:underline">
+              Tout voir →
+            </Link>
+          </div>
+          <LatestListings />
+        </section>
+      )}
+
+      {user?.status === 'PENDING' && (
+        <p className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-center text-sm font-medium text-amber-800">
+          ⏳ Votre compte est en attente de validation par un administrateur.
+        </p>
+      )}
 
       {isAdmin && (
         <p className="text-center text-xs text-slate-400">

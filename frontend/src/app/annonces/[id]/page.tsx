@@ -8,6 +8,8 @@ import { useAuth } from '@/components/AuthProvider';
 import { ErrorMessage, Spinner } from '@/components/Feedback';
 import { formatDistance, formatRelativeDate } from '@/lib/format';
 import { CATEGORY_EMOJI, CATEGORY_LABELS, Listing, STATUS_LABELS } from '@/lib/types';
+import { RequireAccount } from '@/components/RequireAccount';
+
 
 /**
  * Détail d'une annonce + mise en relation (message au voisin).
@@ -73,6 +75,7 @@ export default function ListingDetailPage() {
   const closed = listing.status !== 'OPEN';
 
   return (
+    <RequireAccount>
     <article className="mx-auto max-w-2xl space-y-5">
       <Link href="/annonces" className="text-sm font-medium text-brand-600 hover:underline">
         ← Retour aux annonces
@@ -175,5 +178,6 @@ export default function ListingDetailPage() {
         )}
       </div>
     </article>
+      </RequireAccount>
   );
 }

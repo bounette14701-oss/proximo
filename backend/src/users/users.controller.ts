@@ -1,6 +1,7 @@
 import { Body, Controller, Get, NotFoundException, Param, Patch, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { StatusGuard } from '../common/guards/status.guard';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UsersService } from './users.service';
 
@@ -29,6 +30,7 @@ export class UsersController {
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard, StatusGuard)
   async getPublic(@Param('id') id: string) {
     const profile = await this.usersService.getPublicProfile(id);
     if (!profile) {

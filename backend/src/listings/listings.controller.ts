@@ -26,29 +26,30 @@ import { ListingsService } from './listings.service';
  * Routes protégées : création, modification, suppression (propriétaire).
  */
 @Controller('listings')
+@UseGuards(JwtAuthGuard, StatusGuard)
 export class ListingsController {
   constructor(private readonly listingsService: ListingsService) {}
 
   @Get()
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
   async findAll(@Query() query: QueryListingsDto) {
     const result = await this.listingsService.findAll(query);
     return result;
   }
 
   @Get('mine')
-  @UseGuards(JwtAuthGuard, StatusGuard)
   async mine(@CurrentUser() user: { id: string }) {
     const listings = await this.listingsService.findMine(user.id);
     return { listings };
   }
 
   @Get(':id')
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.listingsService.findOne(id);
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard, StatusGuard)
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @HttpCode(HttpStatus.CREATED)
   async create(@CurrentUser() user: { id: string }, @Body() dto: CreateListingDto) {
@@ -57,7 +58,6 @@ export class ListingsController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard, StatusGuard)
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   async update(
     @Param('id', ParseUUIDPipe) id: string,

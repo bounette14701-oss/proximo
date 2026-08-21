@@ -7,6 +7,8 @@ import { ErrorMessage, Spinner } from '@/components/Feedback';
 import api from '@/lib/api';
 import { formatRelativeDate } from '@/lib/format';
 import type { Conversation } from '@/lib/types';
+import { RequireAccount } from '@/components/RequireAccount';
+
 
 /**
  * Liste des conversations de l'utilisateur (dernier message + non-lus).
@@ -48,6 +50,7 @@ export default function MessagesPage() {
   if (error) return <ErrorMessage message={error} />;
 
   return (
+    <RequireAccount>
     <div className="mx-auto max-w-2xl space-y-6">
       <h1 className="text-2xl font-bold text-slate-900">Mes conversations</h1>
 
@@ -100,5 +103,6 @@ export default function MessagesPage() {
         </ul>
       )}
     </div>
+      </RequireAccount>
   );
 }

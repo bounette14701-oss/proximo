@@ -5,6 +5,8 @@ import api from '@/lib/api';
 import { CATEGORY_LABELS, Listing, ListingCategory, ListingPage } from '@/lib/types';
 import { ListingCard } from '@/components/ListingCard';
 import { ErrorMessage, Spinner } from '@/components/Feedback';
+import { RequireAccount } from '@/components/RequireAccount';
+
 
 /**
  * Recherche d'annonces avec périmètre géographique.
@@ -101,6 +103,7 @@ export default function ListingsPage() {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
+    <RequireAccount>
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-slate-900">Annonces près de chez moi</h1>
 
@@ -231,5 +234,6 @@ export default function ListingsPage() {
         </>
       )}
     </div>
+      </RequireAccount>
   );
 }

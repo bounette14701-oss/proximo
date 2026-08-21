@@ -1,6 +1,8 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { StatusGuard } from '../common/guards/status.guard';
 import { GeocodingService } from './geocoding.service';
 
 /**
@@ -19,6 +21,7 @@ class GeocodeQueryDto {
 }
 
 @Controller('geocode')
+@UseGuards(JwtAuthGuard, StatusGuard)
 export class GeocodingController {
   constructor(private readonly geocodingService: GeocodingService) {}
 

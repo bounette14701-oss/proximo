@@ -5,6 +5,8 @@ import { useAuth } from '@/components/AuthProvider';
 import { ErrorMessage } from '@/components/Feedback';
 import api from '@/lib/api';
 import type { Invitation } from '@/lib/types';
+import { RequireAccount } from '@/components/RequireAccount';
+
 
 /**
  * Inviter un voisin de la résidence : lien partageable + QR code
@@ -33,6 +35,7 @@ export default function InviterPage() {
   };
 
   return (
+    <RequireAccount>
     <div className="mx-auto max-w-md px-4 py-8">
       <h1 className="text-2xl font-bold text-slate-900">Inviter un voisin</h1>
       <p className="mt-1 text-sm text-slate-600">
@@ -84,5 +87,6 @@ export default function InviterPage() {
         </div>
       )}
     </div>
+      </RequireAccount>
   );
 }

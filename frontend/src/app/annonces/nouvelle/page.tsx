@@ -7,6 +7,8 @@ import { ErrorMessage, SuccessMessage } from '@/components/Feedback';
 import { Spinner } from '@/components/Feedback';
 import api from '@/lib/api';
 import { CATEGORY_LABELS, ListingCategory } from '@/lib/types';
+import { RequireAccount } from '@/components/RequireAccount';
+
 
 /**
  * Création d'une annonce (réservée aux utilisateurs connectés).
@@ -99,6 +101,7 @@ export default function NewListingPage() {
   };
 
   return (
+    <RequireAccount>
     <div className="mx-auto max-w-2xl space-y-6">
       <h1 className="text-2xl font-bold text-slate-900">Déposer une annonce</h1>
 
@@ -234,5 +237,6 @@ export default function NewListingPage() {
         </button>
       </form>
     </div>
+      </RequireAccount>
   );
 }

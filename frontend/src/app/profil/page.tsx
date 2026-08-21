@@ -12,6 +12,7 @@ import {
   type Listing,
   type User,
 } from '@/lib/types';
+import { RequireAccount } from '@/components/RequireAccount';
 
 /**
  * Profil : réglages de notification par email, double authentification
@@ -147,6 +148,7 @@ export default function ProfilPage() {
   }
 
   return (
+    <RequireAccount>
     <div className="mx-auto max-w-3xl px-4 py-10">
       <h1 className="text-2xl font-bold text-slate-900">
         Bonjour, {user.firstName} 👋
@@ -324,5 +326,6 @@ export default function ProfilPage() {
         )}
       </section>
     </div>
+      </RequireAccount>
   );
 }
