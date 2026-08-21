@@ -20,9 +20,7 @@ export class ApiError extends Error {
 
 async function rawFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const headers = new Headers(options.headers);
-  // JSON par défaut, SAUF pour FormData (le navigateur pose lui-même le
-  // header multipart avec sa frontière — un Content-Type forcé le casserait).
-  if (options.body && !headers.has('Content-Type') && !(options.body instanceof FormData)) {
+  if (options.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
   return fetch(`${API_BASE}${path}`, {

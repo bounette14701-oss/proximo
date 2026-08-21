@@ -15,6 +15,10 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Principe du moindre privilège : lecture seule du dépôt (pas d'écriture).
+permissions:
+  contents: read
+
 jobs:
   backend:
     name: Backend (lint + tests + build)
