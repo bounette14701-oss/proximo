@@ -12,7 +12,7 @@ import { useAuth } from './AuthProvider';
  * menu de session (connexion / inscription / profil / déconnexion).
  */
 export function Navbar() {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, isAdmin } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [unread, setUnread] = useState(0);
@@ -76,6 +76,16 @@ export function Navbar() {
                   {unread}
                 </span>
               )}
+            </Link>
+          )}
+          {user && (
+            <Link href="/signalements" className={linkClass('/signalements')}>
+              Signalements
+            </Link>
+          )}
+          {isAdmin && (
+            <Link href="/admin" className={linkClass('/admin')}>
+              Admin
             </Link>
           )}
         </div>

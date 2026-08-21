@@ -15,6 +15,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { StatusGuard } from '../common/guards/status.guard';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { QueryListingsDto } from './dto/query-listings.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
@@ -34,13 +35,20 @@ export class ListingsController {
     return result;
   }
 
+  @Get('mine')
+  @UseGuards(JwtAuthGuard, StatusGuard)
+  async mine(@CurrentUser() user: { id: string }) {
+    const listings = await this.listingsService.findMine(user.id);
+    return { listings };
+  }
+
   @Get(':id')
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.listingsService.findOne(id);
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, StatusGuard)
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @HttpCode(HttpStatus.CREATED)
   async create(@CurrentUser() user: { id: string }, @Body() dto: CreateListingDto) {
@@ -49,7 +57,7 @@ export class ListingsController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, StatusGuard)
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -61,7 +69,7 @@ export class ListingsController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, StatusGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: { id: string }) {
     await this.listingsService.remove(id, user.id);

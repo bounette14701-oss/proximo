@@ -1,6 +1,9 @@
 /**
- * Types partagés — miroir des réponses de l'API.
+ * Types partagés — miroir des réponses de l'API (Sprint 2 inclus).
  */
+
+export type UserRole = 'USER' | 'ADMIN';
+export type UserStatus = 'PENDING' | 'ACTIVE' | 'SUSPENDED';
 
 export interface User {
   id: string;
@@ -8,6 +11,10 @@ export interface User {
   firstName: string;
   lastName: string;
   neighborhood: string | null;
+  role?: UserRole;
+  status?: UserStatus;
+  totpEnabled?: boolean;
+  emailNotifications?: boolean;
   createdAt?: string;
 }
 
@@ -57,6 +64,66 @@ export interface Conversation {
   updatedAt: string;
 }
 
+// ─── Sprint 2 : signalements d'incidents ─────────────────────
+
+export type IncidentCategory = 'WATER_LEAK' | 'ELEVATOR' | 'DAMAGE' | 'OTHER';
+export type IncidentStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED';
+
+export interface IncidentAttachment {
+  id: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+}
+
+export interface Incident {
+  id: string;
+  title: string;
+  category: IncidentCategory;
+  description: string;
+  status: IncidentStatus;
+  createdAt: string;
+  updatedAt: string;
+  attachments: IncidentAttachment[];
+  user?: { firstName: string; lastName: string; email: string };
+}
+
+// ─── Sprint 2 : invitations ──────────────────────────────────
+
+export interface Invitation {
+  id: string;
+  token: string;
+  url: string;
+  qrUrl: string;
+  neighborhood: string;
+  expiresAt: string;
+  createdAt?: string;
+  usedAt?: string | null;
+  createdBy?: { firstName: string; lastName: string };
+}
+
+// ─── Sprint 2 : administration ───────────────────────────────
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  neighborhood: string | null;
+  role: UserRole;
+  status: UserStatus;
+  totpEnabled: boolean;
+  createdAt: string;
+}
+
+export interface SyndicSettings {
+  id: number;
+  agencyName: string | null;
+  email: string | null;
+  updatedAt: string;
+}
+
 export const CATEGORY_LABELS: Record<ListingCategory, string> = {
   TOOL: 'Prêt de matériel',
   SERVICE: 'Service entre voisins',
@@ -75,4 +142,23 @@ export const STATUS_LABELS: Record<ListingStatus, string> = {
   OPEN: 'Disponible',
   RESERVED: 'Réservée',
   CLOSED: 'Clôturée',
+};
+
+export const INCIDENT_CATEGORY_LABELS: Record<IncidentCategory, string> = {
+  WATER_LEAK: '💧 Fuite d’eau',
+  ELEVATOR: '🛗 Panne d’ascenseur',
+  DAMAGE: '🏚️ Dégradation',
+  OTHER: '📋 Autre',
+};
+
+export const INCIDENT_STATUS_LABELS: Record<IncidentStatus, string> = {
+  OPEN: '🟡 Nouveau',
+  IN_PROGRESS: '🔵 En cours',
+  RESOLVED: '🟢 Résolu',
+};
+
+export const USER_STATUS_LABELS: Record<UserStatus, string> = {
+  PENDING: '⏳ En attente',
+  ACTIVE: '✅ Actif',
+  SUSPENDED: '🚫 Suspendu',
 };

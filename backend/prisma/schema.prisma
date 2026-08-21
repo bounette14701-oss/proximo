@@ -18,20 +18,28 @@ datasource db {
 
 // ─── Utilisateur ──────────────────────────────────────────────
 model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  passwordHash  String
-  firstName     String
-  lastName      String
-  neighborhood  String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                 String    @id @default(uuid())
+  email              String    @unique
+  passwordHash       String? // null pour les comptes créés via Google OAuth
+  googleId           String?   @unique
+  firstName          String
+  lastName           String
+  neighborhood       String?
+  role               String    @default("USER") // USER | ADMIN
+  status             String    @default("PENDING") // PENDING | ACTIVE | SUSPENDED
+  totpSecret         String? // secret TOTP chiffré côté application (2FA admin)
+  totpEnabled        Boolean   @default(false)
+  emailNotifications Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   listings      Listing[]
   conversationsA Conversation[] @relation("convA")
   conversationsB Conversation[] @relation("convB")
   sentMessages  Message[]      @relation("msgSender")
   refreshTokens RefreshToken[]
+  incidents     Incident[]
+  invitations   Invitation[]
 }
 
 // ─── Annonce d'entraide ───────────────────────────────────────
@@ -94,4 +102,57 @@ model Message {
   createdAt      DateTime     @default(now())
 
   @@index([conversationId, createdAt])
+}
+
+// ─── Signalement d'incident (syndic) ──────────────────────────
+model Incident {
+  id          String   @id @default(uuid())
+  title       String
+  category    String // WATER_LEAK | ELEVATOR | DAMAGE | OTHER
+  description String
+  status      String   @default("OPEN") // OPEN | IN_PROGRESS | RESOLVED
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attachments IncidentAttachment[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+// ─── Pièce jointe d'un signalement ────────────────────────────
+model IncidentAttachment {
+  id         String   @id @default(uuid())
+  incidentId String
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  filename   String
+  mimeType   String
+  size       Int
+  path       String // chemin relatif dans le volume /data/uploads
+  createdAt  DateTime @default(now())
+
+  @@index([incidentId])
+}
+
+// ─── Réglages syndic / agence (singleton id=1) ────────────────
+model SyndicSettings {
+  id         Int      @id @default(1)
+  agencyName String   @default("Agence de gestion")
+  email      String   @default("")
+  updatedAt  DateTime @updatedAt
+}
+
+// ─── Invitation (QR code / lien à usage unique) ───────────────
+model Invitation {
+  id           String    @id @default(uuid())
+  token        String    @unique
+  neighborhood String // quartier / résidence ciblé par l'invitation
+  createdById  String
+  createdBy    User      @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  expiresAt    DateTime
+  usedAt       DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([createdById])
 }

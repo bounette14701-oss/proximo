@@ -1,214 +1,328 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
-import { ErrorMessage, Spinner } from '@/components/Feedback';
+import { ErrorMessage } from '@/components/Feedback';
 import api from '@/lib/api';
-import { CATEGORY_EMOJI, CATEGORY_LABELS, Listing, STATUS_LABELS, User } from '@/lib/types';
-
-interface ProfileData {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  neighborhood: string | null;
-  createdAt: string;
-  listings: Array<Pick<Listing, 'id' | 'title' | 'category' | 'status' | 'neighborhood' | 'createdAt'>>;
-}
+import {
+  CATEGORY_EMOJI,
+  CATEGORY_LABELS,
+  STATUS_LABELS,
+  type Listing,
+  type User,
+} from '@/lib/types';
 
 /**
- * Profil : informations du compte + gestion des annonces
- * (clôturer / rouvrir / supprimer — propriétaire uniquement).
+ * Profil : réglages de notification par email, double authentification
+ * (administrateurs), et gestion de ses annonces.
  */
 export default function ProfilPage() {
-  const { user, loading: authLoading, refresh } = useAuth();
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { user, refresh, isAdmin } = useAuth();
 
-  const loadProfile = useCallback(async () => {
-    try {
-      const data = await api<{ user: ProfileData }>('/users/me');
-      setProfile(data.user);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Chargement impossible');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [neighborhood, setNeighborhood] = useState('');
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  // 2FA
+  const [totpSetup, setTotpSetup] = useState<{ secret: string; qrDataUrl: string } | null>(null);
+  const [totpCode, setTotpCode] = useState('');
+  const [totpEnabled, setTotpEnabled] = useState(false);
 
   useEffect(() => {
-    if (authLoading) return;
     if (!user) return;
-    void loadProfile();
-  }, [authLoading, user, loadProfile]);
+    setFirstName(user.firstName);
+    setLastName(user.lastName);
+    setNeighborhood(user.neighborhood ?? '');
+    setEmailNotifications(user.emailNotifications ?? true);
+    setTotpEnabled(user.totpEnabled ?? false);
+    api<{ listings: Listing[] }>('/listings/mine')
+      .then((data) => setListings(data.listings))
+      .catch(() => setListings([]));
+  }, [user]);
 
-  const setStatus = async (listingId: string, status: 'RESERVED' | 'CLOSED' | 'OPEN') => {
+  const handleSave = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(null);
+    setSuccess(null);
     try {
-      await api(`/listings/${listingId}`, {
+      const data = await api<{ user: User }>('/users/me', {
         method: 'PATCH',
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          neighborhood,
+          emailNotifications,
+        }),
       });
-      await loadProfile();
+      setSuccess('Réglages enregistrés.');
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Enregistrement impossible');
+    }
+  };
+
+  const startTwoFactor = async () => {
+    setError(null);
+    setSuccess(null);
+    try {
+      const data = await api<{ secret: string; qrDataUrl: string }>('/auth/2fa/setup', {
+        method: 'POST',
+      });
+      setTotpSetup(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Configuration impossible');
+    }
+  };
+
+  const confirmTwoFactor = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(null);
+    setSuccess(null);
+    try {
+      await api('/auth/2fa/confirm', {
+        method: 'POST',
+        body: JSON.stringify({ code: totpCode }),
+      });
+      setTotpSetup(null);
+      setTotpCode('');
+      setTotpEnabled(true);
+      setSuccess('Double authentification activée ✓');
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Code incorrect');
+    }
+  };
+
+  const disableTwoFactor = async () => {
+    const code = window.prompt('Saisissez votre code actuel pour désactiver le 2FA :');
+    if (!code) return;
+    setError(null);
+    setSuccess(null);
+    try {
+      await api('/auth/2fa/disable', {
+        method: 'POST',
+        body: JSON.stringify({ code }),
+      });
+      setTotpEnabled(false);
+      setSuccess('Double authentification désactivée.');
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Code incorrect');
+    }
+  };
+
+  const closeListing = async (id: string) => {
+    setError(null);
+    try {
+      await api(`/listings/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'CLOSED' }),
+      });
+      setListings((current) =>
+        current.map((listing) =>
+          listing.id === id ? { ...listing, status: 'CLOSED' } : listing,
+        ),
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Action impossible');
     }
   };
 
-  const remove = async (listingId: string) => {
-    if (!window.confirm('Supprimer définitivement cette annonce ?')) return;
-    try {
-      await api(`/listings/${listingId}`, { method: 'DELETE' });
-      await loadProfile();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Suppression impossible');
-    }
-  };
-
-  if (authLoading || loading) return <Spinner label="Chargement du profil…" />;
-
   if (!user) {
     return (
-      <div className="mx-auto max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-        <p className="text-slate-600">Connectez-vous pour voir votre profil.</p>
-        <Link
-          href="/connexion?next=/profil"
-          className="mt-4 inline-block rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
-        >
-          Se connecter
-        </Link>
+      <div className="mx-auto max-w-md px-4 py-16 text-center">
+        <p className="text-slate-500">
+          <Link href="/connexion" className="text-brand-600 hover:underline">
+            Connectez-vous
+          </Link>{' '}
+          pour voir votre profil.
+        </p>
       </div>
     );
   }
 
-  if (error && !profile) return <ErrorMessage message={error} />;
-
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      {error && <ErrorMessage message={error} />}
+    <div className="mx-auto max-w-3xl px-4 py-10">
+      <h1 className="text-2xl font-bold text-slate-900">
+        Bonjour, {user.firstName} 👋
+      </h1>
+      <p className="mt-1 text-sm text-slate-600">{user.email}</p>
+      {user.status === 'PENDING' && (
+        <p className="mt-3 rounded-xl bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+          ⏳ Votre compte est en attente de validation par un administrateur.
+        </p>
+      )}
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-bold text-slate-900">
-          {profile?.firstName} {profile?.lastName}
-        </h1>
-        <dl className="mt-4 space-y-2 text-sm text-slate-500">
-          <div className="flex justify-between gap-4">
-            <dt>Email</dt>
-            <dd className="font-medium text-slate-700">{profile?.email}</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt>Quartier</dt>
-            <dd className="font-medium text-slate-700">{profile?.neighborhood ?? '—'}</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt>Membre depuis</dt>
-            <dd className="font-medium text-slate-700">
-              {profile
-                ? new Date(profile.createdAt).toLocaleDateString('fr-FR', {
-                    month: 'long',
-                    year: 'numeric',
-                  })
-                : '—'}
-            </dd>
-          </div>
-        </dl>
-        <div className="mt-4 flex gap-3">
-          <button
-            type="button"
-            onClick={() => void refresh()}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50"
-          >
-            Actualiser
-          </button>
-          <Link
-            href="/annonces/nouvelle"
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
-          >
-            + Nouvelle annonce
-          </Link>
-        </div>
-      </section>
+      <div className="mt-6 grid gap-6 md:grid-cols-2">
+        {/* ─── Réglages ─────────────────────────────────────── */}
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="font-semibold text-slate-900">Réglages</h2>
+          <form onSubmit={(event) => void handleSave(event)} className="mt-4 space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                type="text"
+                required
+                value={firstName}
+                onChange={(event) => setFirstName(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
+              />
+              <input
+                type="text"
+                required
+                value={lastName}
+                onChange={(event) => setLastName(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
+              />
+            </div>
+            <input
+              type="text"
+              value={neighborhood}
+              onChange={(event) => setNeighborhood(event.target.value)}
+              placeholder="Quartier / résidence"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
+            />
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={emailNotifications}
+                onChange={(event) => setEmailNotifications(event.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-brand-600"
+              />
+              Recevoir les notifications par email (messages, statuts des signalements)
+            </label>
+            <ErrorMessage message={error} />
+            {success && <p className="text-sm font-medium text-brand-600">{success}</p>}
+            <button
+              type="submit"
+              className="rounded-lg bg-brand-600 px-5 py-2.5 font-semibold text-white hover:bg-brand-700"
+            >
+              Enregistrer
+            </button>
+          </form>
+        </section>
 
-      <section>
-        <h2 className="mb-4 text-lg font-bold text-slate-900">Mes annonces</h2>
-        {profile && profile.listings.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500">
-            Vous n&apos;avez pas encore d&apos;annonce.
-          </div>
-        ) : (
-          <ul className="space-y-3">
-            {profile?.listings.map((listing) => (
-              <li
-                key={listing.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-              >
-                <div className="min-w-0">
-                  <Link
-                    href={`/annonces/${listing.id}`}
-                    className="font-semibold text-slate-900 hover:text-brand-700"
-                  >
-                    {CATEGORY_EMOJI[listing.category]} {listing.title}
-                  </Link>
-                  <p className="mt-0.5 text-xs text-slate-400">
-                    {CATEGORY_LABELS[listing.category]} · 📍 {listing.neighborhood}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                      listing.status === 'OPEN'
-                        ? 'bg-green-100 text-green-700'
-                        : listing.status === 'RESERVED'
-                          ? 'bg-amber-100 text-amber-700'
-                          : 'bg-slate-200 text-slate-600'
-                    }`}
-                  >
-                    {STATUS_LABELS[listing.status]}
+        {/* ─── Sécurité (2FA administrateur) ────────────────── */}
+        {isAdmin && (
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="font-semibold text-slate-900">Sécurité du compte admin</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Double authentification (TOTP — Google Authenticator, Authy…)
+            </p>
+            <div className="mt-4">
+              {totpEnabled ? (
+                <div className="flex items-center justify-between rounded-xl bg-brand-50 px-4 py-3">
+                  <span className="text-sm font-medium text-brand-800">
+                    ✅ 2FA active
                   </span>
-                  {listing.status === 'OPEN' && (
-                    <button
-                      type="button"
-                      onClick={() => void setStatus(listing.id, 'RESERVED')}
-                      className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
-                      title="Masquer temporairement"
-                    >
-                      Réserver
-                    </button>
-                  )}
-                  {listing.status !== 'CLOSED' && (
-                    <button
-                      type="button"
-                      onClick={() => void setStatus(listing.id, 'CLOSED')}
-                      className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
-                    >
-                      Clôturer
-                    </button>
-                  )}
-                  {listing.status !== 'OPEN' && (
-                    <button
-                      type="button"
-                      onClick={() => void setStatus(listing.id, 'OPEN')}
-                      className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium hover:bg-slate-50"
-                    >
-                      Rouvrir
-                    </button>
-                  )}
                   <button
                     type="button"
-                    onClick={() => void remove(listing.id)}
-                    className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                    onClick={() => void disableTwoFactor()}
+                    className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
                   >
-                    Supprimer
+                    Désactiver
                   </button>
                 </div>
+              ) : totpSetup ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-slate-600">
+                    1. Scannez ce QR code avec votre application
+                    d&apos;authentification :
+                  </p>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={totpSetup.qrDataUrl}
+                    alt="QR code TOTP"
+                    width={160}
+                    height={160}
+                    className="mx-auto rounded-lg border border-slate-200"
+                  />
+                  <p className="break-all rounded-lg bg-slate-50 p-2 text-center font-mono text-xs text-slate-500">
+                    {totpSetup.secret}
+                  </p>
+                  <p className="text-sm text-slate-600">
+                    2. Saisissez le code à 6 chiffres pour confirmer :
+                  </p>
+                  <form onSubmit={(event) => void confirmTwoFactor(event)} className="flex gap-2">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      required
+                      maxLength={6}
+                      pattern="\d{6}"
+                      value={totpCode}
+                      onChange={(event) => setTotpCode(event.target.value)}
+                      placeholder="123456"
+                      className="flex-1 rounded-lg border border-slate-300 px-3 py-2.5 text-center tracking-[0.4em] focus:border-brand-500 focus:outline-none"
+                    />
+                    <button
+                      type="submit"
+                      disabled={totpCode.length !== 6}
+                      className="rounded-lg bg-brand-600 px-4 py-2.5 font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+                    >
+                      Activer
+                    </button>
+                  </form>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void startTwoFactor()}
+                  className="rounded-lg bg-brand-600 px-4 py-2.5 font-semibold text-white hover:bg-brand-700"
+                >
+                  Activer la double authentification
+                </button>
+              )}
+            </div>
+          </section>
+        )}
+      </div>
+
+      {/* ─── Mes annonces ───────────────────────────────────── */}
+      <section className="mt-8">
+        <h2 className="text-lg font-semibold text-slate-900">Mes annonces</h2>
+        {listings.length === 0 ? (
+          <p className="mt-3 rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+            Aucune annonce.{' '}
+            <Link href="/annonces/nouvelle" className="text-brand-600 hover:underline">
+              Déposez-en une
+            </Link>
+            .
+          </p>
+        ) : (
+          <ul className="mt-3 space-y-3">
+            {listings.map((listing) => (
+              <li
+                key={listing.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+              >
+                <div>
+                  <p className="font-semibold text-slate-900">
+                    {CATEGORY_EMOJI[listing.category]} {listing.title}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    {CATEGORY_LABELS[listing.category]} · {listing.neighborhood} ·{' '}
+                    {STATUS_LABELS[listing.status]}
+                  </p>
+                </div>
+                {listing.status !== 'CLOSED' && (
+                  <button
+                    type="button"
+                    onClick={() => void closeListing(listing.id)}
+                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                  >
+                    Clôturer
+                  </button>
+                )}
               </li>
             ))}
           </ul>
         )}
       </section>
-
-      {profile && <p className="sr-only">Profil de {profile.email}</p>}
     </div>
   );
 }

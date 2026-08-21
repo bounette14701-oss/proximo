@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Conversation, Message } from '@prisma/client';
+import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 
@@ -16,7 +17,10 @@ import { CreateMessageDto } from './dto/create-message.dto';
  */
 @Injectable()
 export class MessagesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly emailService: EmailService,
+  ) {}
 
   /** Envoie un message : crée la conversation si elle n'existe pas. */
   async send(
@@ -58,7 +62,31 @@ export class MessagesService {
       data: { updatedAt: new Date() },
     });
 
+    // Notification email au destinataire (si activée dans ses réglages).
+    await this.notifyRecipient(senderId, dto.recipientId, message.content);
+
     return { conversationId: conversation.id, message };
+  }
+
+  /** Envoie un email de notification au destinataire (réglage utilisateur). */
+  private async notifyRecipient(
+    senderId: string,
+    recipientId: string,
+    content: string,
+  ): Promise<void> {
+    const recipient = await this.prisma.user.findUnique({
+      where: { id: recipientId },
+      select: { email: true, emailNotifications: true, firstName: true },
+    });
+    const sender = await this.prisma.user.findUnique({
+      where: { id: senderId },
+      select: { firstName: true },
+    });
+    if (!recipient?.emailNotifications || !sender) {
+      return;
+    }
+    const preview = content.length > 120 ? `${content.slice(0, 120)}…` : content;
+    await this.emailService.sendNewMessage(recipient.email, sender.firstName, preview);
   }
 
   /** Liste les conversations de l'utilisateur (avec dernier message et non-lus). */

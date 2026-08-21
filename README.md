@@ -14,14 +14,21 @@ d'adresse exacte**.
 
 ---
 
-## ✨ Fonctionnalités (MVP)
+## ✨ Fonctionnalités
 
 | Fonctionnalité | Description |
 |---|---|
-| **Comptes & sessions** | Inscription, connexion, déconnexion — JWT en cookies HTTP-only, refresh token révocable avec rotation |
+| **Comptes & sessions** | Inscription, connexion, déconnexion — JWT en cookies HTTP-only, refresh token révocable avec rotation, « Se souvenir de moi » (90 j) |
+| **Connexion Google** | OAuth2 / OpenID Connect (bouton « Continuer avec Google »), identité vérifiée par Google |
+| **Double authentification (admin)** | TOTP obligatoire pour le back-office (Google Authenticator / Authy) — QR code au premier setup, vérification stricte du code à 6 chiffres à la connexion |
 | **Annonces d'entraide** | Prêt de matériel (🔧), services entre voisins (🤝), dons (🎁) — publication, modification, clôture, suppression |
 | **Messagerie** | Conversations 1-1 entre voisins, messages non lus, marquage lu |
 | **Périmètre géographique** | Recherche dans un rayon de 1 à 100 km, tri par distance (PostGIS) |
+| **Modération des membres** | Nouveaux comptes en attente (`PENDING`) jusqu'à validation par un admin (sauf emails déclarés administrateurs) ; suspension et suppression depuis le back-office |
+| **Signalements syndic** | Formulaire d'incident (fuite d'eau, ascenseur, dégradation…) avec pièces jointes (JPG/PNG/WEBP/PDF, 5 Mo), email récapitulatif automatique au syndic, suivi du statut (ouvert / en cours / résolu) |
+| **Invitations par QR code** | Lien d'invitation lié au quartier, usage unique et expirable (72 h), page d'atterrissage avec pré-remplissage du périmètre |
+| **Notifications email** | Nodemailer/SMTP : bienvenue, nouveau message, changement de statut d'un signalement — activables/désactivables dans les réglages |
+| **Back-office admin** | Validation/suspension/suppression des membres, modération des signalements, configuration de l'email du syndic, génération d'invitations + QR |
 | **Vie privée** | L'adresse exacte et les coordonnées ne sont **jamais** exposées : seul le quartier et la distance sont publics |
 
 ## 🧱 Stack technique
@@ -43,14 +50,19 @@ proximo/
 │   ├── prisma/schema.prisma   # Modèle de données (User, Listing, Conversation…)
 │   ├── prisma/migrations/     # Migrations SQL versionnées
 │   └── src/
-│       ├── auth/              # JWT + cookies HTTP-only, rotation du refresh
+│       ├── auth/              # JWT + cookies HTTP-only, rotation, Google OAuth2, 2FA TOTP
 │       ├── listings/          # Annonces + recherche par rayon (PostGIS)
-│       ├── messages/          # Messagerie 1-1
+│       ├── messages/          # Messagerie 1-1 + notifications email
+│       ├── incidents/         # Signalements syndic + pièces jointes (upload sécurisé)
+│       ├── invitations/       # Invitations QR (jeton usage unique / expirable)
+│       ├── admin/             # Back-office (2FA, membres, signalements, réglages syndic)
+│       ├── email/             # Emails transactionnels (Nodemailer/SMTP)
 │       ├── geocoding/         # Géocodage adresse → coordonnées (OSM Nominatim)
-│       ├── users/             # Profils (public : quartier uniquement)
-│       └── common/            # Guards : JWT, anti-CSRF (Origin), rate limiting
+│       ├── users/             # Profils + réglages de notification
+│       └── common/            # Guards : JWT, rôles, statut, admin, anti-CSRF, rate limiting
 └── frontend/                  # Next.js (App Router)
-    └── src/app/               # Pages : accueil, annonces, messagerie, profil
+    └── src/app/               # Pages : accueil, annonces, messagerie, signalements,
+                               #          admin, invitation, profil
 ```
 
 ## 🚀 Démarrage rapide (Docker)

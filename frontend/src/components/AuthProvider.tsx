@@ -10,6 +10,7 @@ interface AuthContextValue {
   refresh: () => Promise<void>;
   logout: () => Promise<void>;
   setUser: (user: User | null) => void;
+  isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -44,7 +45,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, refresh, logout, setUser }}>
+    <AuthContext.Provider
+      value={{ user, loading, refresh, logout, setUser, isAdmin: user?.role === 'ADMIN' }}
+    >
       {children}
     </AuthContext.Provider>
   );

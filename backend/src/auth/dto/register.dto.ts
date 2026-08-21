@@ -2,18 +2,21 @@ import { IsEmail, IsOptional, IsString, Length, Matches, MaxLength } from 'class
 
 /**
  * Inscription. Validation stricte côté serveur (class-validator).
+ * `invitationToken` : lien d'invitation QR (optionnel) — pré-remplit le
+ * quartier et consomme le jeton à usage unique.
  */
 export class RegisterDto {
   @IsEmail({}, { message: 'Adresse email invalide' })
   @MaxLength(254, { message: 'Adresse email trop longue' })
   email!: string;
 
+  @IsOptional()
   @IsString({ message: 'Mot de passe requis' })
   @Length(8, 128, { message: 'Le mot de passe doit contenir entre 8 et 128 caractères' })
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, {
     message: 'Le mot de passe doit contenir une minuscule, une majuscule et un chiffre',
   })
-  password!: string;
+  password?: string;
 
   @IsString({ message: 'Prénom requis' })
   @Length(1, 50, { message: 'Prénom invalide' })
@@ -27,4 +30,9 @@ export class RegisterDto {
   @IsString({ message: 'Quartier invalide' })
   @MaxLength(120, { message: 'Quartier trop long' })
   neighborhood?: string;
+
+  @IsOptional()
+  @IsString({ message: 'Jeton d’invitation invalide' })
+  @MaxLength(64, { message: 'Jeton d’invitation invalide' })
+  invitationToken?: string;
 }

@@ -7,7 +7,8 @@ export function Spinner({ label = 'Chargement…' }: { label?: string }) {
   );
 }
 
-export function ErrorMessage({ message }: { message: string }) {
+export function ErrorMessage({ message }: { message?: string | null }) {
+  if (!message) return null;
   return (
     <div
       role="alert"
@@ -18,7 +19,8 @@ export function ErrorMessage({ message }: { message: string }) {
   );
 }
 
-export function SuccessMessage({ message }: { message: string }) {
+export function SuccessMessage({ message }: { message?: string | null }) {
+  if (!message) return null;
   return (
     <div
       role="status"

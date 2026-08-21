@@ -2,11 +2,15 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
 import { OriginCheckGuard } from './common/guards/origin-check.guard';
+import { EmailModule } from './email/email.module';
 import { GeocodingModule } from './geocoding/geocoding.module';
 import { HealthModule } from './health/health.module';
+import { IncidentsModule } from './incidents/incidents.module';
+import { InvitationsModule } from './invitations/invitations.module';
 import { ListingsModule } from './listings/listings.module';
 import { MessagesModule } from './messages/messages.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -19,12 +23,16 @@ import { UsersModule } from './users/users.module';
     // JwtService disponible globalement (utilisé par les guards d'authentification).
     JwtModule.register({ global: true }),
     PrismaModule,
+    EmailModule,
     HealthModule,
     GeocodingModule,
     AuthModule,
     UsersModule,
     ListingsModule,
     MessagesModule,
+    IncidentsModule,
+    InvitationsModule,
+    AdminModule,
   ],
   providers: [
     // Ordre d'exécution : vérification d'origine (anti-CSRF) puis rate limiting.

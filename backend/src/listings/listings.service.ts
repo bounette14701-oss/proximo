@@ -50,6 +50,20 @@ export class ListingsService {
     private readonly geocoding: GeocodingService,
   ) {}
 
+  /** Annonces de l'utilisateur (profil). */
+  async findMine(userId: string): Promise<ListingResponse[]> {
+    const rows = await this.prisma.$queryRaw<RawListingRow[]>`
+      SELECT l.id, l.title, l.description, l.category, l.status, l.neighborhood,
+             l."createdAt", l."ownerId",
+             u."firstName", u.neighborhood AS "ownerNeighborhood"
+      FROM "Listing" l
+      JOIN "User" u ON u.id = l."ownerId"
+      WHERE l."ownerId" = ${userId}
+      ORDER BY l."createdAt" DESC
+    `;
+    return rows.map((row) => toListingResponse(row));
+  }
+
   /** Crée une annonce pour l'utilisateur connecté. */
   async create(ownerId: string, dto: CreateListingDto): Promise<ListingResponse> {
     const location = await this.resolveLocation(dto);

@@ -13,6 +13,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { StatusGuard } from '../common/guards/status.guard';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { MessagesService } from './messages.service';
 
@@ -20,7 +21,7 @@ import { MessagesService } from './messages.service';
  * Messagerie entre voisins — routes protégées et fortement limitées en débit.
  */
 @Controller('messages')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, StatusGuard)
 export class MessagesController {
   constructor(private readonly messagesService: MessagesService) {}
 

@@ -5,6 +5,10 @@ import { ACCESS_TOKEN_COOKIE } from '../../auth/auth.constants';
 export interface JwtPayload {
   sub: string;
   email: string;
+  role: string;
+  status: string;
+  totpEnabled: boolean;
+  twoFactorVerified: boolean;
   type: 'access';
 }
 
@@ -32,7 +36,14 @@ export class JwtAuthGuard implements CanActivate {
       if (payload.type !== 'access' || !payload.sub) {
         throw new Error('Payload invalide');
       }
-      request.user = { id: payload.sub, email: payload.email };
+      request.user = {
+        id: payload.sub,
+        email: payload.email,
+        role: payload.role,
+        status: payload.status,
+        totpEnabled: payload.totpEnabled,
+        twoFactorVerified: payload.twoFactorVerified,
+      };
       return true;
     } catch {
       throw new UnauthorizedException('Session expirée ou invalide');
