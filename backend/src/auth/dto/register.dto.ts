@@ -1,0 +1,30 @@
+import { IsEmail, IsOptional, IsString, Length, Matches, MaxLength } from 'class-validator';
+
+/**
+ * Inscription. Validation stricte côté serveur (class-validator).
+ */
+export class RegisterDto {
+  @IsEmail({}, { message: 'Adresse email invalide' })
+  @MaxLength(254, { message: 'Adresse email trop longue' })
+  email!: string;
+
+  @IsString({ message: 'Mot de passe requis' })
+  @Length(8, 128, { message: 'Le mot de passe doit contenir entre 8 et 128 caractères' })
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, {
+    message: 'Le mot de passe doit contenir une minuscule, une majuscule et un chiffre',
+  })
+  password!: string;
+
+  @IsString({ message: 'Prénom requis' })
+  @Length(1, 50, { message: 'Prénom invalide' })
+  firstName!: string;
+
+  @IsString({ message: 'Nom requis' })
+  @Length(1, 50, { message: 'Nom invalide' })
+  lastName!: string;
+
+  @IsOptional()
+  @IsString({ message: 'Quartier invalide' })
+  @MaxLength(120, { message: 'Quartier trop long' })
+  neighborhood?: string;
+}

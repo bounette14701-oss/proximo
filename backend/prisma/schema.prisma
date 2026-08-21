@@ -1,0 +1,97 @@
+// ============================================================
+// Proximo — Schéma Prisma (PostgreSQL 16 + PostGIS)
+//
+// Note géographique : lat/lng sont stockés en Float simples ;
+// l'index spatial GiST est créé par la migration sur une
+// expression PostGIS (voir prisma/migrations/.../migration.sql).
+// Les requêtes de périmètre utilisent $queryRaw + ST_DWithin.
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Utilisateur ──────────────────────────────────────────────
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  neighborhood  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  listings      Listing[]
+  conversationsA Conversation[] @relation("convA")
+  conversationsB Conversation[] @relation("convB")
+  sentMessages  Message[]      @relation("msgSender")
+  refreshTokens RefreshToken[]
+}
+
+// ─── Annonce d'entraide ───────────────────────────────────────
+model Listing {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  category    String // TOOL | SERVICE | DONATION | OTHER
+  status      String  @default("OPEN") // OPEN | RESERVED | CLOSED
+  lat         Float // coordonnées approximatives — JAMAIS exposées par l'API
+  lng         Float
+  address     String // adresse saisie — masquée dans les réponses API
+  neighborhood String // quartier/ville affiché (ex. "Lyon 7e")
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([category, status])
+}
+
+// ─── Token de rafraîchissement (révocable) ────────────────────
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String // SHA-256 du token (jamais stocké en clair)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// ─── Conversation (messagerie 1-1) ────────────────────────────
+model Conversation {
+  id        String    @id @default(uuid())
+  userAId   String // ordre lexicographique : plus petit des deux ids
+  userBId   String
+  userA     User      @relation("convA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB     User      @relation("convB", fields: [userBId], references: [id], onDelete: Cascade)
+  messages  Message[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([userAId, userBId])
+  @@index([userBId])
+}
+
+// ─── Message ──────────────────────────────────────────────────
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation("msgSender", fields: [senderId], references: [id], onDelete: Cascade)
+  content        String
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+}
