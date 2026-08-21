@@ -9,9 +9,9 @@
 # ---------- Étape 1 : build ----------
 FROM node:22-bookworm-slim AS build
 
-# Outils requis pour les dépendances natives (argon2)
+# Outils requis pour les dépendances natives (argon2) + OpenSSL (moteur Prisma)
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends python3 make g++ \
+    && apt-get install -y --no-install-recommends python3 make g++ openssl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -34,9 +34,9 @@ FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 
-# curl/wget pour le healthcheck
+# curl/wget pour le healthcheck + OpenSSL (moteur Prisma pour les migrations)
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends wget \
+    && apt-get install -y --no-install-recommends wget openssl \
     && rm -rf /var/lib/apt/lists/*
 
 # Node_modules complet (contient la CLI Prisma pour les migrations)
