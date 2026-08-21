@@ -32,12 +32,13 @@ jobs:
           cache-dependency-path: backend/package-lock.json
 
       - name: Installer les dépendances
-        # Retries npm renforcés + nouvelle tentative : le registry npm est
-        # sporadiquement instable depuis les runners partagés (bug npm "Exit
-        # handler never called!").
+        # Résilience : IPv4 forcé (bug npm "Exit handler never called!" lié au
+        # DNS IPv6 des runners) + retries renforcés + nouvelle tentative.
+        env:
+          NODE_OPTIONS: --dns-result-order=ipv4first
         run: |
           npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 \
-            || npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000
+            || { sleep 10; npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000; }
 
       - name: Générer le client Prisma
         run: npx prisma generate
@@ -67,10 +68,12 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Installer les dépendances
-        # Retries npm renforcés + nouvelle tentative (registry sporadiquement instable).
+        # Résilience : IPv4 forcé (bug npm "Exit handler never called!") + retries + retry.
+        env:
+          NODE_OPTIONS: --dns-result-order=ipv4first
         run: |
           npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 \
-            || npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000
+            || { sleep 10; npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000; }
 
       - name: Lint
         run: npm run lint
