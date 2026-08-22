@@ -41,29 +41,40 @@ jobs:
         run: npm install -g npm@10.8.2
 
       - name: Installer les dépendances
-        # Résilience : on utilise le cache npm restauré par setup-node
-        # (~/.npm) avec --prefer-offline — PAS de --cache /tmp/npm-cache
-        # (vide à chaque run → re-téléchargement massif → bug npm
-        # "Exit handler never called!" sur les runners). 3 tentatives.
+        # Résilience : le bug npm "Exit handler never called!" des runners
+        # peut laisser un node_modules INCOMPLET avec un exit code 0.
+        # → on vérifie l'intégrité (binaire clé présent), sinon purge + retry
+        # avec le registre miroir npmmirror. Cache : ~/.npm (setup-node).
         env:
           NODE_OPTIONS: --dns-result-order=ipv4first
         run: |
-          for i in 1 2 3; do
-            echo "--- tentative npm ci $i/3 ---"
-            if npm ci --no-audit --no-fund --prefer-offline \
+          install_deps() {
+            npm ci --no-audit --no-fund --prefer-offline \
               --fetch-retries=5 \
-              --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000; then
-              echo "npm ci OK (tentative $i)"
+              --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 "$@"
+          }
+          for i in 1 2 3; do
+            echo "--- tentative $i/3 ---"
+            if install_deps && [ -x node_modules/.bin/prisma ]; then
+              echo "npm ci OK + intégrité vérifiée (prisma présent)"
+              break
+            fi
+            echo "node_modules incomplet ou échec — purge et nouvelle tentative…"
+            rm -rf node_modules
+            if install_deps --registry=https://registry.npmmirror.com \
+              && [ -x node_modules/.bin/prisma ]; then
+              echo "npm ci OK via miroir (tentative $i)"
               break
             fi
             [ "$i" = 3 ] && { echo "npm ci a échoué 3 fois"; exit 1; }
+            rm -rf node_modules
             sleep 15
           done
 
       - name: Générer le client Prisma
-        # Version épinglée : si npm ci a échoué partiellement, npx ne doit
-        # jamais installer prisma@latest (7.x rejette le schéma v5).
-        run: npx prisma@5.22.0 generate
+        # Binaire local épinglé (^5.22.0) — jamais npx (qui pourrait
+        # installer prisma@latest, incompatible avec le schéma v5).
+        run: ./node_modules/.bin/prisma generate
 
       - name: Lint
         run: npm run lint
@@ -93,21 +104,33 @@ jobs:
         run: npm install -g npm@10.8.2
 
       - name: Installer les dépendances
-        # Résilience : cache npm restauré par setup-node + --prefer-offline
-        # (pas de --cache /tmp/npm-cache vide → bug "Exit handler never
-        # called!" sur les runners). 3 tentatives.
+        # Résilience : le bug npm "Exit handler never called!" des runners
+        # peut laisser un node_modules INCOMPLET avec un exit code 0.
+        # → on vérifie l'intégrité (binaire clé présent), sinon purge + retry
+        # avec le registre miroir npmmirror. Cache : ~/.npm (setup-node).
         env:
           NODE_OPTIONS: --dns-result-order=ipv4first
         run: |
-          for i in 1 2 3; do
-            echo "--- tentative npm ci $i/3 ---"
-            if npm ci --no-audit --no-fund --prefer-offline \
+          install_deps() {
+            npm ci --no-audit --no-fund --prefer-offline \
               --fetch-retries=5 \
-              --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000; then
-              echo "npm ci OK (tentative $i)"
+              --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 "$@"
+          }
+          for i in 1 2 3; do
+            echo "--- tentative $i/3 ---"
+            if install_deps && [ -x node_modules/.bin/next ]; then
+              echo "npm ci OK + intégrité vérifiée (next présent)"
+              break
+            fi
+            echo "node_modules incomplet ou échec — purge et nouvelle tentative…"
+            rm -rf node_modules
+            if install_deps --registry=https://registry.npmmirror.com \
+              && [ -x node_modules/.bin/next ]; then
+              echo "npm ci OK via miroir (tentative $i)"
               break
             fi
             [ "$i" = 3 ] && { echo "npm ci a échoué 3 fois"; exit 1; }
+            rm -rf node_modules
             sleep 15
           done
 
