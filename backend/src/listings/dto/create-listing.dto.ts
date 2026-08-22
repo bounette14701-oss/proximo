@@ -1,4 +1,6 @@
+import { Transform } from 'class-transformer';
 import {
+  IsBoolean,
   IsEnum,
   IsNumber,
   IsOptional,
@@ -60,4 +62,13 @@ export class CreateListingDto {
   @IsString({ message: 'Quartier invalide' })
   @MaxLength(120, { message: 'Quartier trop long' })
   neighborhood?: string;
+
+  /**
+   * Préférence « afficher mes détails » (bâtiment/étage) choisie au dépôt :
+   * met à jour le profil de l'utilisateur en plus de l'annonce.
+   */
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean({ message: 'showDetails invalide' })
+  showDetails?: boolean;
 }

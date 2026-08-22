@@ -14,6 +14,9 @@ export interface RawListingRow {
   ownerId: string;
   ownerFirstName: string;
   ownerNeighborhood: string | null;
+  ownerBuilding: string | null;
+  ownerFloor: string | null;
+  ownerShowDetails: boolean;
   distanceMeters?: number | null;
 }
 
@@ -37,6 +40,9 @@ export interface ListingResponse {
     id: string;
     firstName: string;
     neighborhood: string | null;
+    building: string | null;
+    floor: string | null;
+    showDetails: boolean;
   };
 }
 
@@ -112,6 +118,9 @@ export function toListingResponse(
       id: row.ownerId,
       firstName: row.ownerFirstName,
       neighborhood: row.ownerNeighborhood,
+      building: row.ownerBuilding ?? null,
+      floor: row.ownerFloor ?? null,
+      showDetails: row.ownerShowDetails ?? true,
     },
   };
 }

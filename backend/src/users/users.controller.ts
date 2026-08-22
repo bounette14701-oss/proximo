@@ -1,4 +1,4 @@
-import { Body, Controller, Get, NotFoundException, Param, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Patch, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { StatusGuard } from '../common/guards/status.guard';
@@ -27,6 +27,13 @@ export class UsersController {
   async updateMe(@CurrentUser() user: { id: string }, @Body() dto: UpdateProfileDto) {
     const profile = await this.usersService.updateProfile(user.id, dto);
     return { user: profile };
+  }
+
+  @Delete('me')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteAccount(@CurrentUser() user: { id: string }) {
+    await this.usersService.deleteAccount(user.id);
   }
 
   @Get(':id')

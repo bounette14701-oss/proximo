@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { LatestListings } from '@/components/LatestListings';
+import { LatestIncidents } from '@/components/LatestIncidents';
 import { useAuth } from '@/components/AuthProvider';
 
 /**
@@ -105,6 +106,22 @@ export default function HomePage() {
             </Link>
           </div>
           <LatestListings />
+        </section>
+      )}
+
+      {/* ─── Derniers signalements (réservé aux membres validés) ── */}
+      {user?.status === 'ACTIVE' && (
+        <section>
+          <div className="mb-3 flex items-end justify-between">
+            <h2 className="text-lg font-bold text-slate-900">🛠️ Signalements en cours</h2>
+            <Link
+              href="/annonces?categorie=SIGNALEMENT"
+              className="text-sm font-medium text-brand-600 hover:underline"
+            >
+              Tout voir →
+            </Link>
+          </div>
+          <LatestIncidents />
         </section>
       )}
 

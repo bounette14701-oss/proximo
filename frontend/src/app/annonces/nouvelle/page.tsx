@@ -33,13 +33,10 @@ function NewListingForm() {
   const [category, setCategory] = useState<PublishCategory>('TOOL');
   const [incidentCategory, setIncidentCategory] = useState<IncidentCategory>('OTHER');
   const [description, setDescription] = useState('');
-  const [address, setAddress] = useState('');
   const [neighborhood, setNeighborhood] = useState('');
   const [location, setLocation] = useState('');
-  const [lat, setLat] = useState('');
-  const [lng, setLng] = useState('');
+  const [showDetails, setShowDetails] = useState(true);
   const [files, setFiles] = useState<File[]>([]);
-  const [geocoding, setGeocoding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -61,27 +58,6 @@ function NewListingForm() {
 
   if (authLoading || !user) return <Spinner label="Vérification de la session…" />;
 
-  const locateManually = () => {
-    if (!navigator.geolocation) {
-      setError('Géolocalisation non disponible. Saisissez une adresse ou des coordonnées.');
-      return;
-    }
-    setGeocoding(true);
-    setError(null);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLat(position.coords.latitude.toFixed(6));
-        setLng(position.coords.longitude.toFixed(6));
-        setGeocoding(false);
-      },
-      () => {
-        setError('Géolocalisation refusée.');
-        setGeocoding(false);
-      },
-      { timeout: 10_000 },
-    );
-  };
-
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
@@ -100,6 +76,7 @@ function NewListingForm() {
         form.set('category', incidentCategory);
         form.set('description', description.trim());
         form.set('neighborhood', location.trim());
+        form.set('showDetails', String(showDetails));
         for (const file of files) form.append('files', file);
         const result = await api<{ incident: { id: string } }>('/incidents', {
           method: 'POST',
@@ -114,20 +91,11 @@ function NewListingForm() {
         title: title.trim(),
         category,
         description: description.trim(),
+        showDetails,
       };
-      if (address.trim()) {
-        payload.address = address.trim();
-        if (neighborhood.trim()) payload.neighborhood = neighborhood.trim();
-      } else if (lat && lng && neighborhood.trim()) {
-        payload.lat = Number(lat);
-        payload.lng = Number(lng);
+      if (neighborhood.trim()) {
+        // Résidence : pas de géolocalisation nécessaire à l'échelle d'un immeuble.
         payload.neighborhood = neighborhood.trim();
-      } else {
-        setError(
-          'Indiquez une adresse (recommandé) ou des coordonnées manuelles avec un résidence.',
-        );
-        setSubmitting(false);
-        return;
       }
 
       const result = await api<{ listing: { id: string } }>('/listings', {
@@ -283,71 +251,16 @@ function NewListingForm() {
               </div>
             </>
           ) : (
-            <fieldset className="rounded-xl border border-slate-200 p-4">
-              <legend className="px-2 text-sm font-medium text-slate-700">
-                Localisation (jamais affichée publiquement — seul le résidence l&apos;est)
-              </legend>
-
-              <div className="space-y-3">
-                <div>
-                  <label htmlFor="address" className="mb-1 block text-sm text-slate-600">
-                    Adresse ou résidence (recommandé — géolocalisation automatique)
-                  </label>
-                  <input
-                    id="address"
-                    type="text"
-                    value={address}
-                    onChange={(event) => setAddress(event.target.value)}
-                    placeholder="Ex. 12 rue des Lilas, Lyon 7e"
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
-                  />
-                </div>
-
-                <div className="flex items-center gap-3 text-sm text-slate-500">
-                  <span>ou</span>
-                  <button
-                    type="button"
-                    onClick={locateManually}
-                    disabled={geocoding}
-                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium hover:bg-slate-50 disabled:opacity-50"
-                  >
-                    {geocoding ? 'Localisation…' : '📍 Utiliser ma position'}
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <input
-                    type="number"
-                    step="any"
-                    value={lat}
-                    onChange={(event) => setLat(event.target.value)}
-                    placeholder="Latitude"
-                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
-                  />
-                  <input
-                    type="number"
-                    step="any"
-                    value={lng}
-                    onChange={(event) => setLng(event.target.value)}
-                    placeholder="Longitude"
-                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
-                  />
-                  <input
-                    type="text"
-                    value={neighborhood}
-                    onChange={(event) => setNeighborhood(event.target.value)}
-                    placeholder="Résidence affiché"
-                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
-                  />
-                </div>
-                <p className="text-xs text-slate-400">
-                  Les coordonnées manuelles ne servent qu&apos;au calcul des distances : elles ne
-                  sont jamais exposées aux autres utilisateurs.
-                </p>
-              </div>
-            </fieldset>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={showDetails}
+                onChange={(event) => setShowDetails(event.target.checked)}
+                className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+              />
+              Afficher mon bâtiment et mon étage sur cette publication
+            </label>
           )}
-
           {error && <ErrorMessage message={error} />}
           {success && <SuccessMessage message={success} />}
 

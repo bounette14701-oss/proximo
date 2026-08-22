@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsEmail, IsOptional, IsString, MaxLength } from 'class-validator';
 
 /**
  * Mise à jour du profil / réglages de notification.
@@ -18,6 +18,20 @@ export class UpdateProfileDto {
   @IsString({ message: 'Quartier invalide' })
   @MaxLength(120, { message: 'Quartier trop long' })
   neighborhood?: string;
+
+  @IsOptional()
+  @IsString({ message: 'Bâtiment invalide' })
+  @MaxLength(20, { message: 'Bâtiment trop long' })
+  building?: string;
+
+  @IsOptional()
+  @IsString({ message: 'Étage invalide' })
+  @MaxLength(20, { message: 'Étage trop long' })
+  floor?: string;
+
+  @IsOptional()
+  @IsBoolean({ message: 'Visibilité invalide' })
+  showDetails?: boolean;
 
   @IsOptional()
   @IsEmail({}, { message: 'Adresse email invalide' })

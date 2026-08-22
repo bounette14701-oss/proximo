@@ -67,6 +67,10 @@ export async function api<T = unknown>(
     );
   }
 
+  if (response.status === 204) {
+    return null as T; // suppression (pas de corps)
+  }
+
   return (await response.json()) as T;
 }
 

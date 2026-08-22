@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
 import { ErrorMessage } from '@/components/Feedback';
+import { formatLocation } from '@/lib/format';
 import api from '@/lib/api';
 import {
   CATEGORY_EMOJI,
@@ -19,11 +20,14 @@ import { RequireAccount } from '@/components/RequireAccount';
  * (administrateurs), et gestion de ses annonces.
  */
 export default function ProfilPage() {
-  const { user, refresh, isAdmin } = useAuth();
+  const { user, refresh, isAdmin, logout } = useAuth();
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [neighborhood, setNeighborhood] = useState('');
+  const [building, setBuilding] = useState('');
+  const [floor, setFloor] = useState('');
+  const [showDetails, setShowDetails] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [listings, setListings] = useState<Listing[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +43,9 @@ export default function ProfilPage() {
     setFirstName(user.firstName);
     setLastName(user.lastName);
     setNeighborhood(user.neighborhood ?? '');
+    setBuilding(user.building ?? '');
+    setFloor(user.floor ?? '');
+    setShowDetails(user.showDetails ?? true);
     setEmailNotifications(user.emailNotifications ?? true);
     setTotpEnabled(user.totpEnabled ?? false);
     api<{ listings: Listing[] }>('/listings/mine')
@@ -57,6 +64,9 @@ export default function ProfilPage() {
           firstName,
           lastName,
           neighborhood,
+          building,
+          floor,
+          showDetails,
           emailNotifications,
         }),
       });
@@ -154,6 +164,11 @@ export default function ProfilPage() {
         Bonjour, {user.firstName} 👋
       </h1>
       <p className="mt-1 text-sm text-slate-600">{user.email}</p>
+      {(user.building || user.floor) && (
+        <p className="mt-1 text-sm text-slate-500">
+          📍 {[user.building && `Bâtiment ${user.building}`, user.floor && `étage ${user.floor}`].filter(Boolean).join(' · ')}
+        </p>
+      )}
       {user.status === 'PENDING' && (
         <p className="mt-3 rounded-xl bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
           ⏳ Votre compte est en attente de validation par un administrateur.
@@ -188,6 +203,33 @@ export default function ProfilPage() {
               placeholder="Résidence / immeuble"
               className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
             />
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                type="text"
+                maxLength={20}
+                value={building}
+                onChange={(event) => setBuilding(event.target.value)}
+                placeholder="Bâtiment (ex. B) — optionnel"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
+              />
+              <input
+                type="text"
+                maxLength={20}
+                value={floor}
+                onChange={(event) => setFloor(event.target.value)}
+                placeholder="Étage (ex. 3e) — optionnel"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={showDetails}
+                onChange={(event) => setShowDetails(event.target.checked)}
+                className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+              />
+              Afficher mon bâtiment et mon étage sur mes publications
+            </label>
             <label className="flex items-center gap-2 text-sm text-slate-700">
               <input
                 type="checkbox"
@@ -307,8 +349,15 @@ export default function ProfilPage() {
                     {CATEGORY_EMOJI[listing.category]} {listing.title}
                   </p>
                   <p className="text-xs text-slate-400">
-                    {CATEGORY_LABELS[listing.category]} · {listing.residenceName ?? listing.neighborhood} ·{' '}
-                    {STATUS_LABELS[listing.status]}
+                    {CATEGORY_LABELS[listing.category]} ·{' '}
+                    {formatLocation(
+                      listing.residenceName,
+                      listing.neighborhood,
+                      listing.owner.building,
+                      listing.owner.floor,
+                      listing.owner.showDetails,
+                    )}{' '}
+                    · {STATUS_LABELS[listing.status]}
                   </p>
                 </div>
                 {listing.status !== 'CLOSED' && (
@@ -324,6 +373,37 @@ export default function ProfilPage() {
             ))}
           </ul>
         )}
+      </section>
+
+      {/* ─── Zone dangereuse ────────────────────────────────── */}
+      <section className="mt-8 rounded-2xl border border-red-200 bg-red-50/50 p-5">
+        <h2 className="font-semibold text-red-700">Supprimer mon compte</h2>
+        <p className="mt-1 text-sm text-red-600/80">
+          Supprime définitivement votre compte, vos annonces, signalements et messages. Cette action
+          est irréversible.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            if (
+              !window.confirm(
+                'Supprimer définitivement votre compte ? Cette action est irréversible.',
+              )
+            )
+              return;
+            api('/users/me', { method: 'DELETE' })
+              .then(async () => {
+                await logout();
+                window.location.href = '/';
+              })
+              .catch((err) =>
+                setError(err instanceof Error ? err.message : 'Suppression impossible'),
+              );
+          }}
+          className="mt-3 rounded-lg border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100"
+        >
+          Supprimer définitivement
+        </button>
       </section>
     </div>
       </RequireAccount>

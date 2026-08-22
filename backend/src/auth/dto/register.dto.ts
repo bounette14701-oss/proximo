@@ -32,6 +32,16 @@ export class RegisterDto {
   neighborhood?: string;
 
   @IsOptional()
+  @IsString({ message: 'Bâtiment invalide' })
+  @MaxLength(20, { message: 'Bâtiment trop long' })
+  building?: string;
+
+  @IsOptional()
+  @IsString({ message: 'Étage invalide' })
+  @MaxLength(20, { message: 'Étage trop long' })
+  floor?: string;
+
+  @IsOptional()
   @IsString({ message: 'Jeton d’invitation invalide' })
   @MaxLength(64, { message: 'Jeton d’invitation invalide' })
   invitationToken?: string;

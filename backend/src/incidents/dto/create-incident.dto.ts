@@ -1,4 +1,5 @@
-import { IsEnum, IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsBoolean, IsEnum, IsOptional, IsString, Length, MaxLength } from 'class-validator';
 
 /**
  * Catégories de signalements d'incident (syndic / agence).
@@ -30,4 +31,13 @@ export class CreateIncidentDto {
   @IsString({ message: 'Quartier invalide' })
   @MaxLength(120, { message: 'Quartier trop long' })
   neighborhood?: string;
+
+  /**
+   * Préférence « afficher mes détails » (bâtiment/étage) choisie au dépôt :
+   * met à jour le profil de l'utilisateur en plus du signalement.
+   */
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean({ message: 'showDetails invalide' })
+  showDetails?: boolean;
 }

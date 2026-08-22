@@ -25,6 +25,9 @@ model User {
   firstName          String
   lastName           String
   neighborhood       String?
+  building           String? // bâtiment (optionnel, ex. « B »)
+  floor              String? // étage (optionnel, ex. « 3e »)
+  showDetails        Boolean   @default(true) // afficher bâtiment/étage sur les annonces
   role               String    @default("USER") // USER | ADMIN
   status             String    @default("PENDING") // PENDING | ACTIVE | SUSPENDED
   totpSecret         String? // secret TOTP chiffré côté application (2FA admin)

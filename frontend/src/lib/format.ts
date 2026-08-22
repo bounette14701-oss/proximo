@@ -29,3 +29,23 @@ export function formatDateTime(iso: string): string {
     minute: '2-digit',
   });
 }
+
+/**
+ * Libellé de localisation affiché sur les cartes : résidence (ou quartier),
+ * complété par bâtiment/étage UNIQUEMENT si l'utilisateur a coché
+ * « afficher mes détails » (showDetails). Évite les « — ».
+ */
+export function formatLocation(
+  residenceName: string | null | undefined,
+  neighborhood: string | null | undefined,
+  building?: string | null,
+  floor?: string | null,
+  showDetails?: boolean,
+): string {
+  const base = residenceName ?? neighborhood ?? 'Résidence';
+  const details =
+    showDetails && (building || floor)
+      ? [building && `bât. ${building}`, floor && `étage ${floor}`].filter(Boolean).join(' · ')
+      : null;
+  return details ? `${base} (${details})` : base;
+}

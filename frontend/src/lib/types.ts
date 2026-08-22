@@ -11,6 +11,9 @@ export interface User {
   firstName: string;
   lastName: string;
   neighborhood: string | null;
+  building: string | null;
+  floor: string | null;
+  showDetails: boolean;
   residenceName: string | null;
   role: UserRole;
   status: UserStatus;
@@ -26,6 +29,9 @@ export interface ListingOwner {
   id: string;
   firstName: string;
   neighborhood: string | null;
+  building?: string | null;
+  floor?: string | null;
+  showDetails?: boolean;
 }
 
 export interface Listing {
@@ -79,6 +85,15 @@ export interface IncidentAttachment {
   createdAt: string;
 }
 
+export interface IncidentUser {
+  firstName: string;
+  lastName: string;
+  email: string;
+  building?: string | null;
+  floor?: string | null;
+  showDetails?: boolean;
+}
+
 export interface Incident {
   id: string;
   title: string;
@@ -89,7 +104,7 @@ export interface Incident {
   createdAt: string;
   updatedAt: string;
   attachments: IncidentAttachment[];
-  user?: { firstName: string; lastName: string; email: string };
+  user?: IncidentUser;
 }
 
 // ─── Sprint 2 : invitations ──────────────────────────────────

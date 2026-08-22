@@ -27,6 +27,8 @@ function InscriptionForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [neighborhood, setNeighborhood] = useState('');
+  const [building, setBuilding] = useState('');
+  const [floor, setFloor] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [pending, setPending] = useState(false);
@@ -44,6 +46,8 @@ function InscriptionForm() {
           email,
           password,
           neighborhood: neighborhood || undefined,
+          building: building || undefined,
+          floor: floor || undefined,
           invitationToken: invitationToken || undefined,
         }),
       });
@@ -154,6 +158,28 @@ function InscriptionForm() {
             placeholder="Résidence / immeuble (ex. Les Cèdres)"
             className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:border-brand-500 focus:outline-none"
           />
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              type="text"
+              maxLength={20}
+              value={building}
+              onChange={(event) => setBuilding(event.target.value)}
+              placeholder="Bâtiment (ex. B) — optionnel"
+              className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:border-brand-500 focus:outline-none"
+            />
+            <input
+              type="text"
+              maxLength={20}
+              value={floor}
+              onChange={(event) => setFloor(event.target.value)}
+              placeholder="Étage (ex. 3e) — optionnel"
+              className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:border-brand-500 focus:outline-none"
+            />
+          </div>
+          <p className="text-xs text-slate-400">
+            Bâtiment et étage : facultatifs, pour aider vos voisins à vous trouver (cela peut être
+            masqué sur vos publications depuis votre profil).
+          </p>
           <ErrorMessage message={error} />
           <button
             type="submit"

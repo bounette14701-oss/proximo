@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { useAuth } from '@/components/AuthProvider';
 import { ErrorMessage, Spinner } from '@/components/Feedback';
-import { formatDistance, formatRelativeDate } from '@/lib/format';
+import { formatDistance, formatLocation, formatRelativeDate } from '@/lib/format';
 import { CATEGORY_EMOJI, CATEGORY_LABELS, Listing, STATUS_LABELS } from '@/lib/types';
 import { RequireAccount } from '@/components/RequireAccount';
 
@@ -108,7 +108,16 @@ export default function ListingDetailPage() {
         <dl className="mt-6 space-y-2 border-t border-slate-100 pt-4 text-sm text-slate-500">
           <div className="flex justify-between gap-4">
             <dt>Résidence</dt>
-            <dd className="font-medium text-slate-700">📍 {listing.neighborhood}</dd>
+            <dd className="font-medium text-slate-700">
+              📍{' '}
+              {formatLocation(
+                listing.residenceName,
+                listing.neighborhood,
+                listing.owner.building,
+                listing.owner.floor,
+                listing.owner.showDetails,
+              )}
+            </dd>
           </div>
           {listing.distanceKm !== undefined && (
             <div className="flex justify-between gap-4">
@@ -120,7 +129,12 @@ export default function ListingDetailPage() {
             <dt>Publiée par</dt>
             <dd className="font-medium text-slate-700">
               {listing.owner.firstName}
-              {listing.owner.neighborhood ? ` (${listing.owner.neighborhood})` : ''}
+              {listing.owner.showDetails &&
+              (listing.owner.building || listing.owner.floor)
+                ? ` (${[listing.owner.building && `bât. ${listing.owner.building}`, listing.owner.floor && `étage ${listing.owner.floor}`].filter(Boolean).join(' · ')})`
+                : listing.owner.neighborhood
+                  ? ` (${listing.owner.neighborhood})`
+                  : ''}
             </dd>
           </div>
           <div className="flex justify-between gap-4">

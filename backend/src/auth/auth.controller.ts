@@ -153,7 +153,6 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   async me(@CurrentUser() user: { id: string }) {
-    const full = await this.authService.findById(user.id);
-    return { user: full };
+    return { user: await this.authService.toPublicUserOrThrow(user.id) };
   }
 }

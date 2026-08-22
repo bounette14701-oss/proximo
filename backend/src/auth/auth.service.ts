@@ -36,6 +36,9 @@ export interface PublicUser {
   firstName: string;
   lastName: string;
   neighborhood: string | null;
+  building: string | null;
+  floor: string | null;
+  showDetails: boolean;
   residenceName: string | null;
   role: string;
   status: string;
@@ -43,6 +46,24 @@ export interface PublicUser {
   emailNotifications: boolean;
   createdAt: Date;
 }
+
+/** Champs utilisateur nécessaires à la représentation publique. */
+type PublicUserFields = Pick<
+  PublicUser,
+  | 'id'
+  | 'email'
+  | 'firstName'
+  | 'lastName'
+  | 'neighborhood'
+  | 'building'
+  | 'floor'
+  | 'showDetails'
+  | 'role'
+  | 'status'
+  | 'totpEnabled'
+  | 'emailNotifications'
+  | 'createdAt'
+>;
 
 /** Emails administrateurs déclarés dans ADMIN_EMAILS (bootstrap). */
 function adminEmails(): string[] {
@@ -99,6 +120,8 @@ export class AuthService {
         firstName: dto.firstName.trim(),
         lastName: dto.lastName.trim(),
         neighborhood,
+        ...(dto.building !== undefined ? { building: dto.building.trim() || null } : {}),
+        ...(dto.floor !== undefined ? { floor: dto.floor.trim() || null } : {}),
         role: isAdmin ? ROLE_ADMIN : ROLE_USER,
         // Les administrateurs déclarés sont actifs d'emblée ;
         // les autres comptes attendent la validation d'un admin.
@@ -292,24 +315,16 @@ export class AuthService {
   }
 
   /** Champs utilisateur nécessaires à la représentation publique. */
-  private userShape(user: {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    neighborhood: string | null;
-    role: string;
-    status: string;
-    totpEnabled: boolean;
-    emailNotifications: boolean;
-    createdAt: Date;
-  }): PublicUser {
+  private userShape(user: PublicUserFields): PublicUser {
     return {
       id: user.id,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
       neighborhood: user.neighborhood,
+      building: user.building,
+      floor: user.floor,
+      showDetails: user.showDetails,
       residenceName: null,
       role: user.role,
       status: user.status,
@@ -319,18 +334,7 @@ export class AuthService {
     };
   }
 
-  toPublicUser(user: {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    neighborhood: string | null;
-    role: string;
-    status: string;
-    totpEnabled: boolean;
-    emailNotifications: boolean;
-    createdAt: Date;
-  }, residenceName?: string | null): PublicUser {
+  toPublicUser(user: PublicUserFields, residenceName?: string | null): PublicUser {
     return {
       ...this.userShape(user),
       residenceName: residenceName ?? user.neighborhood ?? null,
@@ -338,18 +342,7 @@ export class AuthService {
   }
 
   /** Nom de la résidence configuré (settings singleton), avec repli sur le user. */
-  async toPublicUserWithResidence(user: {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    neighborhood: string | null;
-    role: string;
-    status: string;
-    totpEnabled: boolean;
-    emailNotifications: boolean;
-    createdAt: Date;
-  }): Promise<PublicUser> {
+  async toPublicUserWithResidence(user: PublicUserFields): Promise<PublicUser> {
     try {
       const settings = await this.prisma.syndicSettings.findUnique({ where: { id: 1 } });
       return this.toPublicUser(user, settings?.residenceName ?? user.neighborhood);

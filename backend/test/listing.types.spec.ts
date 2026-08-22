@@ -16,6 +16,9 @@ describe('toListingResponse', () => {
     ownerId: 'owner-1',
     ownerFirstName: 'Claire',
     ownerNeighborhood: 'Lyon 7e',
+    ownerBuilding: 'B',
+    ownerFloor: '3e',
+    ownerShowDetails: true,
     distanceMeters: 1234,
   };
 

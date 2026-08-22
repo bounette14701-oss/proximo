@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { CATEGORY_EMOJI, CATEGORY_LABELS, Listing } from '@/lib/types';
-import { formatDistance, formatRelativeDate } from '@/lib/format';
+import { formatDistance, formatLocation, formatRelativeDate } from '@/lib/format';
 
 /**
  * Carte d'annonce : catégorie, titre, description tronquée,
- * quartier, distance (si calculée) et date de publication.
+ * localisation (résidence + bâtiment/étage selon les préférences du
+ * propriétaire) et date de publication.
  */
 export function ListingCard({ listing }: { listing: Listing }) {
   return (
@@ -31,7 +32,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
 
       <div className="mt-4 flex items-center justify-between text-xs text-slate-400">
         <span>
-          📍 {listing.residenceName ?? listing.neighborhood} · {listing.owner.firstName}
+          📍 {formatLocation(listing.residenceName, listing.neighborhood, listing.owner.building, listing.owner.floor, listing.owner.showDetails)} · {listing.owner.firstName}
         </span>
         <span>{formatRelativeDate(listing.createdAt)}</span>
       </div>

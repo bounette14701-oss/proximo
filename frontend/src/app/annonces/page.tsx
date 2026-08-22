@@ -16,6 +16,7 @@ import {
 import { ListingCard } from '@/components/ListingCard';
 import { ErrorMessage, Spinner } from '@/components/Feedback';
 import { RequireAccount } from '@/components/RequireAccount';
+import { formatLocation } from '@/lib/format';
 
 /**
  * Fil unifié de la résidence : annonces (prêt, service, don, avis) et
@@ -34,10 +35,6 @@ function ListingsContent() {
 
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<FilterCategory>('');
-  const [radiusKm, setRadiusKm] = useState(10);
-  const [location, setLocation] = useState<{ lat: number; lng: number; label: string } | null>(null);
-  const [addressInput, setAddressInput] = useState('');
-  const [locating, setLocating] = useState(false);
   const [page, setPage] = useState(1);
   const pageSize = 12;
 
@@ -64,11 +61,6 @@ function ListingsContent() {
         });
         if (search.trim()) params.set('search', search.trim());
         if (category) params.set('category', category);
-        if (location) {
-          params.set('lat', String(location.lat));
-          params.set('lng', String(location.lng));
-          params.set('radiusKm', String(radiusKm));
-        }
         // « Toutes les catégories » : annonces + signalements mélangés.
         const [listingsData, incidentsData] = await Promise.all([
           api<ListingPage>(`/listings?${params.toString()}`),
@@ -86,53 +78,11 @@ function ListingsContent() {
     } finally {
       setLoading(false);
     }
-  }, [search, category, location, radiusKm, page, showIncidents]);
+  }, [search, category, page, showIncidents]);
 
   useEffect(() => {
     void fetchListings();
   }, [fetchListings]);
-
-  // Géolocalisation via le navigateur.
-  const locateMe = () => {
-    if (!navigator.geolocation) {
-      setError('La géolocalisation n’est pas disponible sur ce navigateur.');
-      return;
-    }
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLocation({
-          lat: Number(position.coords.latitude.toFixed(6)),
-          lng: Number(position.coords.longitude.toFixed(6)),
-          label: 'Ma position actuelle',
-        });
-        setLocating(false);
-      },
-      () => {
-        setError('Géolocalisation refusée. Saisissez une adresse à la place.');
-        setLocating(false);
-      },
-      { timeout: 10_000 },
-    );
-  };
-
-  // Géocodage d'une adresse saisie.
-  const geocodeAddress = async () => {
-    const query = addressInput.trim();
-    if (!query) return;
-    setLocating(true);
-    setError(null);
-    try {
-      const data = await api<{ lat: number; lng: number; label: string }>(
-        `/geocode?q=${encodeURIComponent(query)}`,
-      );
-      setLocation(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Adresse introuvable');
-    } finally {
-      setLocating(false);
-    }
-  };
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -144,7 +94,14 @@ function ListingsContent() {
           <p className="font-semibold text-slate-900">{incident.title}</p>
           <p className="mt-0.5 text-sm text-slate-500">
             {INCIDENT_CATEGORY_LABELS[incident.category]} · 📍{' '}
-            {incident.neighborhood || 'Non précisée'}
+            {formatLocation(
+              undefined,
+              incident.neighborhood,
+              incident.user?.building,
+              incident.user?.floor,
+              incident.user?.showDetails,
+            )}
+            {incident.user ? ` · ${incident.user.firstName}` : ''}
           </p>
         </div>
         <span
@@ -240,59 +197,7 @@ function ListingsContent() {
             ))}
             <option value={SIGNALEMENT}>🛠️ Signalements</option>
           </select>
-          {!showIncidents && (
-            <>
-              <select
-                value={radiusKm}
-                onChange={(event) => setRadiusKm(Number(event.target.value))}
-                className="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:outline-none"
-              >
-                {[1, 2, 5, 10, 20, 50].map((value) => (
-                  <option key={value} value={value}>
-                    {value} km
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={locateMe}
-                disabled={locating}
-                className="rounded-lg border border-slate-300 px-3 py-2.5 text-sm font-medium hover:bg-slate-50 disabled:opacity-50"
-              >
-                📍 Me localiser
-              </button>
-            </>
-          )}
         </div>
-
-        {!showIncidents && (
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              type="text"
-              value={addressInput}
-              onChange={(event) => setAddressInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault();
-                  void geocodeAddress();
-                }
-              }}
-              placeholder="Ou saisissez une adresse / un résidence (ex. Lyon 7e)"
-              className="min-w-52 flex-1 rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-brand-500 focus:outline-none"
-            />
-            <button
-              type="button"
-              onClick={() => void geocodeAddress()}
-              disabled={locating}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50 disabled:opacity-50"
-            >
-              Utiliser cette adresse
-            </button>
-            {location && (
-              <span className="text-xs text-slate-500">📍 {location.label}</span>
-            )}
-          </div>
-        )}
 
         <ErrorMessage message={error} />
 

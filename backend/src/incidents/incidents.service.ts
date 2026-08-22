@@ -118,6 +118,14 @@ export class IncidentsService implements OnModuleInit, OnModuleDestroy {
       },
     });
 
+    // Préférence « afficher mes détails » choisie au dépôt → profil.
+    if (dto.showDetails !== undefined) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { showDetails: dto.showDetails },
+      });
+    }
+
     const attachments: IncidentAttachment[] = [];
     for (const file of files) {
       const attachment = await this.prisma.incidentAttachment.create({
@@ -163,7 +171,7 @@ export class IncidentsService implements OnModuleInit, OnModuleDestroy {
     Array<
       Incident & {
         attachments: IncidentAttachment[];
-        user: { firstName: string; lastName: string; email: string };
+        user: { firstName: string; lastName: string; email: string; building: string | null; floor: string | null; showDetails: boolean };
       }
     >
   > {
@@ -172,7 +180,7 @@ export class IncidentsService implements OnModuleInit, OnModuleDestroy {
       orderBy: { createdAt: 'desc' },
       include: {
         attachments: { orderBy: { createdAt: 'asc' } },
-        user: { select: { firstName: true, lastName: true, email: true } },
+        user: { select: { firstName: true, lastName: true, email: true, building: true, floor: true, showDetails: true } },
       },
     });
   }

@@ -22,7 +22,8 @@ import {
 const baseColumns = Prisma.sql`
   l."id", l."title", l."description", l."category", l."status",
   l."neighborhood", l."createdAt", l."ownerId",
-  u."firstName" AS "ownerFirstName", u."neighborhood" AS "ownerNeighborhood"
+  u."firstName" AS "ownerFirstName", u."neighborhood" AS "ownerNeighborhood",
+  u."building" AS "ownerBuilding", u."floor" AS "ownerFloor", u."showDetails" AS "ownerShowDetails"
 `;
 
 /** Colonnes sélectionnées avec distance PostGIS (mètres). */
@@ -31,6 +32,7 @@ function withDistanceColumns(lat: number, lng: number): Prisma.Sql {
     l."id", l."title", l."description", l."category", l."status",
     l."neighborhood", l."createdAt", l."ownerId",
     u."firstName" AS "ownerFirstName", u."neighborhood" AS "ownerNeighborhood",
+    u."building" AS "ownerBuilding", u."floor" AS "ownerFloor", u."showDetails" AS "ownerShowDetails",
     ${distanceSql(lat, lng)} AS "distanceMeters"
   `;
 }
@@ -66,7 +68,9 @@ export class ListingsService {
     const rows = await this.prisma.$queryRaw<RawListingRow[]>`
       SELECT l.id, l.title, l.description, l.category, l.status, l.neighborhood,
              l."createdAt", l."ownerId",
-             u."firstName", u.neighborhood AS "ownerNeighborhood"
+             u."firstName" AS "ownerFirstName", u.neighborhood AS "ownerNeighborhood",
+             u."building" AS "ownerBuilding", u."floor" AS "ownerFloor",
+             u."showDetails" AS "ownerShowDetails"
       FROM "Listing" l
       JOIN "User" u ON u.id = l."ownerId"
       WHERE l."ownerId" = ${userId}
@@ -77,7 +81,17 @@ export class ListingsService {
 
   /** Crée une annonce pour l'utilisateur connecté. */
   async create(ownerId: string, dto: CreateListingDto): Promise<ListingResponse> {
-    const location = await this.resolveLocation(dto);
+    // Repli : sans localisation fournie, on utilise la résidence de l'utilisateur
+    // (la géolocalisation n'est plus requise à l'échelle d'un immeuble).
+    const user = await this.prisma.user.findUnique({
+      where: { id: ownerId },
+      select: { neighborhood: true },
+    });
+    const effectiveDto: CreateListingDto = {
+      ...dto,
+      neighborhood: dto.neighborhood?.trim() || user?.neighborhood?.trim() || undefined,
+    };
+    const location = await this.resolveLocation(effectiveDto);
 
     const listing = await this.prisma.listing.create({
       data: {
@@ -91,6 +105,14 @@ export class ListingsService {
         ownerId,
       },
     });
+
+    // Préférence « afficher mes détails » choisie au dépôt → profil.
+    if (dto.showDetails !== undefined) {
+      await this.prisma.user.update({
+        where: { id: ownerId },
+        data: { showDetails: dto.showDetails },
+      });
+    }
 
     return this.findOne(listing.id, ownerId);
   }
@@ -265,8 +287,19 @@ export class ListingsService {
       };
     }
 
+    // Résidence sans géolocalisation : pas de coordonnées précises
+    // (jamais exposées publiquement de toute façon).
+    if (dto.neighborhood?.trim()) {
+      return {
+        lat: 0,
+        lng: 0,
+        address: '',
+        neighborhood: dto.neighborhood.trim(),
+      };
+    }
+
     throw new BadRequestException(
-      'Indiquez une adresse (géolocalisation automatique) ou des coordonnées manuelles avec un quartier',
+      'Indiquez le nom de la résidence (ou une adresse pour la géolocalisation automatique)',
     );
   }
 }

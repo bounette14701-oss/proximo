@@ -47,6 +47,25 @@ export class UsersService {
   }
 
   /** Met à jour le profil et les réglages de notification. */
+  /** Suppression définitive du compte et de toutes ses données. */
+  async deleteAccount(userId: string): Promise<void> {
+    // Pièces jointes des signalements (fichiers sur disque).
+    const incidents = await this.prisma.incident.findMany({
+      where: { userId },
+      include: { attachments: true },
+    });
+    await this.prisma.incidentAttachment.deleteMany({ where: { incidentId: { in: incidents.map((i) => i.id) } } });
+    await this.prisma.incident.deleteMany({ where: { userId } });
+    await this.prisma.refreshToken.deleteMany({ where: { userId } });
+    await this.prisma.listing.deleteMany({ where: { ownerId: userId } });
+    await this.prisma.invitation.deleteMany({ where: { createdById: userId } });
+    // Conversations (les messages sont supprimés en cascade).
+    await this.prisma.conversation.deleteMany({
+      where: { OR: [{ userAId: userId }, { userBId: userId }] },
+    });
+    await this.prisma.user.delete({ where: { id: userId } });
+  }
+
   async updateProfile(userId: string, dto: UpdateProfileDto) {
     const data: Record<string, unknown> = {};
     if (dto.firstName !== undefined) data.firstName = dto.firstName.trim();
@@ -54,6 +73,9 @@ export class UsersService {
     if (dto.neighborhood !== undefined) {
       data.neighborhood = dto.neighborhood.trim() || null;
     }
+    if (dto.building !== undefined) data.building = dto.building.trim() || null;
+    if (dto.floor !== undefined) data.floor = dto.floor.trim() || null;
+    if (dto.showDetails !== undefined) data.showDetails = dto.showDetails;
     if (dto.emailNotifications !== undefined) data.emailNotifications = dto.emailNotifications;
 
     // Changement d'email : uniquement pour les comptes à mot de passe
