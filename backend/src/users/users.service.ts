@@ -54,7 +54,9 @@ export class UsersService {
       where: { userId },
       include: { attachments: true },
     });
-    await this.prisma.incidentAttachment.deleteMany({ where: { incidentId: { in: incidents.map((i) => i.id) } } });
+    await this.prisma.incidentAttachment.deleteMany({
+      where: { incidentId: { in: incidents.map((i) => i.id) } },
+    });
     await this.prisma.incident.deleteMany({ where: { userId } });
     await this.prisma.refreshToken.deleteMany({ where: { userId } });
     await this.prisma.listing.deleteMany({ where: { ownerId: userId } });

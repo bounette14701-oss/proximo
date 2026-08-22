@@ -1,7 +1,8 @@
 # ============================================================
 # Proximo — Intégration continue
 # Vérifie : lint, tests unitaires, builds (backend + frontend),
-# puis build des images Docker.
+# puis build + publication des images Docker sur GHCR
+# (ghcr.io/bounette14701-oss/proximo-{backend,frontend}).
 # ============================================================
 
 name: CI
@@ -15,9 +16,10 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# Principe du moindre privilège : lecture seule du dépôt (pas d'écriture).
+# Lecture du dépôt + écriture des paquets GHCR (images Docker).
 permissions:
   contents: read
+  packages: write
 
 jobs:
   backend:
@@ -39,13 +41,22 @@ jobs:
         run: npm install -g npm@10.8.2
 
       - name: Installer les dépendances
-        # Résilience : cache npm local frais + IPv4 + retries + retry
-        # (bug npm "Exit handler never called!" sur les runners GitHub).
+        # Résilience : 3 tentatives complètes (le bug "Exit handler never
+        # called!" des runners GitHub est sporadique) + IPv4 + cache local.
         env:
           NODE_OPTIONS: --dns-result-order=ipv4first
         run: |
-          npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 --cache /tmp/npm-cache \
-            || { sleep 10; npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 --cache /tmp/npm-cache --registry=https://registry.npmmirror.com; }
+          for i in 1 2 3; do
+            echo "--- tentative npm ci $i/3 ---"
+            if npm ci --no-audit --no-fund --fetch-retries=5 \
+              --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 \
+              --cache /tmp/npm-cache; then
+              echo "npm ci OK (tentative $i)"
+              break
+            fi
+            [ "$i" = 3 ] && { echo "npm ci a échoué 3 fois"; exit 1; }
+            sleep 15
+          done
 
       - name: Générer le client Prisma
         # Version épinglée : si npm ci a échoué partiellement, npx ne doit
@@ -80,13 +91,21 @@ jobs:
         run: npm install -g npm@10.8.2
 
       - name: Installer les dépendances
-        # Résilience : cache npm local frais + IPv4 + retries + retry
-        # (bug npm "Exit handler never called!" sur les runners GitHub).
+        # Résilience : 3 tentatives complètes + IPv4 + cache local.
         env:
           NODE_OPTIONS: --dns-result-order=ipv4first
         run: |
-          npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 --cache /tmp/npm-cache \
-            || { sleep 10; npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 --cache /tmp/npm-cache --registry=https://registry.npmmirror.com; }
+          for i in 1 2 3; do
+            echo "--- tentative npm ci $i/3 ---"
+            if npm ci --no-audit --no-fund --fetch-retries=5 \
+              --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 \
+              --cache /tmp/npm-cache; then
+              echo "npm ci OK (tentative $i)"
+              break
+            fi
+            [ "$i" = 3 ] && { echo "npm ci a échoué 3 fois"; exit 1; }
+            sleep 15
+          done
 
       - name: Lint
         run: npm run lint
@@ -95,14 +114,54 @@ jobs:
         run: npm run build
 
   docker:
-    name: Build des images Docker
+    name: Build et publication des images Docker (GHCR)
     needs: [backend, frontend]
     runs-on: ubuntu-latest
+    # Publication uniquement sur main (pas sur les PR).
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
 
       - name: Valider docker-compose.yml
         run: docker compose config --quiet
 
-      - name: Build des images
-        run: docker compose build
+      - name: Se connecter au registre GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Métadonnées (tags GHCR)
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}-backend
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=sha-
+
+      - name: Métadonnées frontend (tags GHCR)
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}-frontend
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=sha-
+
+      - name: Build et push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+
+      - name: Build et push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}

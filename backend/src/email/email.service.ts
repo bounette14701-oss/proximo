@@ -128,7 +128,12 @@ export class EmailService implements OnModuleInit {
 
   async sendIncidentToSyndic(
     syndicEmail: string,
-    incident: { title: string; category: string; description: string; neighborhood?: string | null },
+    incident: {
+      title: string;
+      category: string;
+      description: string;
+      neighborhood?: string | null;
+    },
     author: { firstName: string; lastName: string; email: string },
     attachments: { filename: string; mimeType: string }[],
     residenceName?: string | null,

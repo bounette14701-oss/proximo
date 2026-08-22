@@ -23,6 +23,8 @@ services:
       - proximo
 
   backend:
+    # Image pré-buildée publiée sur GHCR (CI) ; sinon build local.
+    image: ghcr.io/bounette14701-oss/proximo-backend:latest
     build:
       context: ./backend
     restart: unless-stopped
@@ -72,9 +74,15 @@ services:
       - proximo
 
   frontend:
+    # Image pré-buildée publiée sur GHCR (CI) ; sinon build local.
+    image: ghcr.io/bounette14701-oss/proximo-frontend:latest
     build:
       context: ./frontend
     restart: unless-stopped
+    environment:
+      # URL interne du backend (nom du service Docker) pour le middleware
+      # d'installation (redirection vers /install au premier lancement).
+      API_INTERNAL_URL: http://backend:3001/api
     depends_on:
       backend:
         condition: service_healthy

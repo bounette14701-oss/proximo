@@ -1,4 +1,10 @@
-import { Injectable, Logger, NotFoundException, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { Incident, IncidentAttachment } from '@prisma/client';
 import { mkdir, unlink } from 'fs/promises';
 import { join } from 'path';
@@ -29,11 +35,14 @@ export class IncidentsService implements OnModuleInit, OnModuleDestroy {
 
   /** Purge automatique : les signalements « traités » sont supprimés après 48 h. */
   onModuleInit(): void {
-    this.purgeTimer = setInterval(() => {
-      void this.purgeResolved().catch((error) =>
-        this.logger.error(`Purge des signalements : ${String(error)}`),
-      );
-    }, 60 * 60 * 1000); // toutes les heures
+    this.purgeTimer = setInterval(
+      () => {
+        void this.purgeResolved().catch((error) =>
+          this.logger.error(`Purge des signalements : ${String(error)}`),
+        );
+      },
+      60 * 60 * 1000,
+    ); // toutes les heures
     void this.purgeResolved();
   }
 
@@ -171,7 +180,14 @@ export class IncidentsService implements OnModuleInit, OnModuleDestroy {
     Array<
       Incident & {
         attachments: IncidentAttachment[];
-        user: { firstName: string; lastName: string; email: string; building: string | null; floor: string | null; showDetails: boolean };
+        user: {
+          firstName: string;
+          lastName: string;
+          email: string;
+          building: string | null;
+          floor: string | null;
+          showDetails: boolean;
+        };
       }
     >
   > {
@@ -180,7 +196,16 @@ export class IncidentsService implements OnModuleInit, OnModuleDestroy {
       orderBy: { createdAt: 'desc' },
       include: {
         attachments: { orderBy: { createdAt: 'asc' } },
-        user: { select: { firstName: true, lastName: true, email: true, building: true, floor: true, showDetails: true } },
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+            building: true,
+            floor: true,
+            showDetails: true,
+          },
+        },
       },
     });
   }

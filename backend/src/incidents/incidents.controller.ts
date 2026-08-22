@@ -93,7 +93,7 @@ export class IncidentsController {
   }
 
   @Get()
-  async all(@CurrentUser() user: { id: string; role: string }) {
+  async all() {
     const incidents = await this.incidentsService.listAll();
     return { incidents };
   }

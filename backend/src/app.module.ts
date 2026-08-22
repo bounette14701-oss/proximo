@@ -14,6 +14,7 @@ import { InvitationsModule } from './invitations/invitations.module';
 import { ListingsModule } from './listings/listings.module';
 import { MessagesModule } from './messages/messages.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { SetupModule } from './setup/setup.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -33,6 +34,7 @@ import { UsersModule } from './users/users.module';
     IncidentsModule,
     InvitationsModule,
     AdminModule,
+    SetupModule,
   ],
   providers: [
     // Ordre d'exécution : vérification d'origine (anti-CSRF) puis rate limiting.

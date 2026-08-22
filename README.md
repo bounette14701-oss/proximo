@@ -65,27 +65,33 @@ proximo/
                                #          admin, invitation, profil
 ```
 
-## 🚀 Démarrage rapide (Docker)
+## 🚀 Démarrage rapide (1 commande)
 
 **Prérequis :** Docker ≥ 24 avec le plugin Compose v2.
 
 ```bash
-git clone https://github.com/bounette14701-oss/proximo.git
-cd proximo
-
-# 1. Configuration
-cp .env.example .env
-# Générer des secrets robustes :
-#   openssl rand -hex 32   → POSTGRES_PASSWORD, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET
-
-# 2. Lancement (migrations automatiques au démarrage du backend)
-docker compose up -d --build
+# Installation complète : vérifie Docker, génère un .env sécurisé
+# (secrets aléatoires), tire les images pré-buildées (ou compile),
+# démarre la stack et ouvre l'assistant d'installation.
+curl -fsSL https://raw.githubusercontent.com/bounette14701-oss/proximo/main/install.sh | bash
 ```
 
-L'application est alors disponible sur **http://localhost:8080** :
+…ou en version « manuelle » :
 
-- Page d'accueil et annonces : `http://localhost:8080`
-- API (healthcheck) : `http://localhost:8080/api/health`
+```bash
+git clone https://github.com/bounette14701-oss/proximo.git
+cd proximo
+./install.sh --yes      # non interactif ; voir ./install.sh --help
+```
+
+L'application est alors disponible sur **http://localhost:8080** — au premier
+lancement, vous êtes redirigé vers **`/install`** : l'assistant crée votre
+compte administrateur et configure le nom de la résidence en 2 minutes.
+Ensuite, connectez-vous et invitez vos voisins (QR code).
+
+> **Images pré-buildées :** la CI publie `ghcr.io/bounette14701-oss/proximo-{backend,frontend}`.
+> `install.sh` les télécharge automatiquement (pas de compilation) et retombe
+> sur un build local si elles n'existent pas encore.
 
 ```bash
 docker compose ps        # état des services
@@ -93,6 +99,19 @@ docker compose logs -f   # journaux
 docker compose down      # arrêt (les données sont conservées)
 docker compose down -v   # arrêt + suppression des données
 ```
+
+## ⚙️ Installation manuelle (sans script)
+
+```bash
+git clone https://github.com/bounette14701-oss/proximo.git
+cd proximo
+cp .env.example .env
+# Générer des secrets robustes :
+#   openssl rand -hex 32   → POSTGRES_PASSWORD, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET
+docker compose up -d --build
+```
+
+Ouvrez **http://localhost:8080** → redirection automatique vers `/install`.
 
 ## 🔐 Configuration
 
@@ -174,7 +193,9 @@ Chaque push sur `main` (et chaque pull request) déclenche :
 
 1. **Backend** : lint (ESLint, zéro warning) → tests unitaires (Jest) → build
 2. **Frontend** : lint (ESLint) → build
-3. **Docker** : validation `docker compose config` → build des trois images
+3. **Docker** : validation `docker compose config` → **publication des images
+   sur GHCR** (`ghcr.io/bounette14701-oss/proximo-{backend,frontend}`,
+   tags `latest` + `sha-…`) — ces images sont utilisées par `install.sh`
 
 ```bash
 cd backend && npm run lint && npm test && npm run build
