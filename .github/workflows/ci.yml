@@ -37,17 +37,32 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
+      - name: Restaurer le cache node_modules
+        # Cache du dossier node_modules complet (clé = lock) : une fois chaud,
+        # npm ci est quasi hors-ligne → insensible aux incidents npmjs.
+        uses: actions/cache@v4
+        with:
+          path: backend/node_modules
+          key: backend-node-modules-${{ hashFiles('backend/package-lock.json') }}
+          restore-keys: |
+            backend-node-modules-
+
       - name: Pinner npm (bug "Exit handler never called!" de npm 10.9.x)
         run: npm install -g npm@10.8.2
 
       - name: Installer les dépendances
         # Résilience : le bug npm "Exit handler never called!" des runners
         # peut laisser un node_modules INCOMPLET avec un exit code 0.
-        # → on vérifie l'intégrité (binaire clé présent), sinon purge + retry
-        # avec le registre miroir npmmirror. Cache : ~/.npm (setup-node).
+        # Si le cache node_modules est restauré (binaire clé présent), on
+        # SAUTE l'installation (npm ci purge node_modules → cache perdu).
+        # Sinon : npm ci + vérification d'intégrité + retry via miroir.
         env:
           NODE_OPTIONS: --dns-result-order=ipv4first
         run: |
+          if [ -x node_modules/.bin/prisma ]; then
+            echo "Cache node_modules restauré — installation sautée."
+            exit 0
+          fi
           install_deps() {
             npm ci --no-audit --no-fund --prefer-offline \
               --fetch-retries=5 \
@@ -100,17 +115,32 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
+      - name: Restaurer le cache node_modules
+        # Cache du dossier node_modules complet (clé = lock) : une fois chaud,
+        # npm ci est quasi hors-ligne → insensible aux incidents npmjs.
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: frontend-node-modules-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            frontend-node-modules-
+
       - name: Pinner npm (bug "Exit handler never called!" de npm 10.9.x)
         run: npm install -g npm@10.8.2
 
       - name: Installer les dépendances
         # Résilience : le bug npm "Exit handler never called!" des runners
         # peut laisser un node_modules INCOMPLET avec un exit code 0.
-        # → on vérifie l'intégrité (binaire clé présent), sinon purge + retry
-        # avec le registre miroir npmmirror. Cache : ~/.npm (setup-node).
+        # Si le cache node_modules est restauré (binaire clé présent), on
+        # SAUTE l'installation (npm ci purge node_modules → cache perdu).
+        # Sinon : npm ci + vérification d'intégrité + retry via miroir.
         env:
           NODE_OPTIONS: --dns-result-order=ipv4first
         run: |
+          if [ -x node_modules/.bin/next ]; then
+            echo "Cache node_modules restauré — installation sautée."
+            exit 0
+          fi
           install_deps() {
             npm ci --no-audit --no-fund --prefer-offline \
               --fetch-retries=5 \
