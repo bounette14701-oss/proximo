@@ -113,6 +113,31 @@ docker compose up -d --build
 
 Ouvrez **http://localhost:8080** → redirection automatique vers `/install`.
 
+## ☁️ Déploiement sur Oracle Cloud Always Free (gratuit)
+
+Le script [`scripts/deploy-oracle.sh`](scripts/deploy-oracle.sh) déploie Proximo
+sur une VM **Oracle Cloud Always Free** (2 VM 1 OCPU/1 Go RAM gratuites pour
+toujours) — il installe Docker, clone le dépôt, génère un `.env` sécurisé,
+démarre la stack et vérifie l'API, le tout via SSH :
+
+```bash
+# Depuis votre machine — remplacez par l'IP publique de votre VM
+./scripts/deploy-oracle.sh --host 129.146.xx.xx \
+  --user opc \
+  --domain proximo.residence.fr \
+  --tunnel-token <token-cloudflare>   # optionnel : expose en HTTPS via Cloudflare
+```
+
+- **Sans tunnel** : l'app répond sur `http://IP:8080` (HTTP seulement) ;
+- **Avec tunnel** (`--tunnel-token`) : ajoutez le Public Hostname dans
+  Zero Trust → Networks → Tunnels → service `http://localhost:8080`
+  — vous n'avez alors **pas besoin d'ouvrir le port 8080** dans la Security List.
+- Après déploiement : ouvrez `https://votre-domaine` → l'assistant `/install`
+  crée le compte admin et le nom de la résidence.
+
+**Security List Oracle** : seul le port 22 (SSH) est nécessaire si vous passez
+par un tunnel Cloudflare ; sinon ouvrez aussi `8080` (Instance → Security Lists).
+
 ## 🔐 Configuration
 
 | Variable | Description | Défaut |
