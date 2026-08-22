@@ -135,6 +135,10 @@ démarre la stack et vérifie l'API, le tout via SSH :
 - Après déploiement : ouvrez `https://votre-domaine` → l'assistant `/install`
   crée le compte admin et le nom de la résidence.
 
+📖 **Guide pas à pas complet** (création du compte Oracle, clé SSH, VM,
+tunnel, Security List, pièges Always Free) :
+**[docs/DEPLOY_ORACLE.md](docs/DEPLOY_ORACLE.md)**
+
 **Security List Oracle** : seul le port 22 (SSH) est nécessaire si vous passez
 par un tunnel Cloudflare ; sinon ouvrez aussi `8080` (Instance → Security Lists).
 
