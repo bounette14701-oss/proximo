@@ -41,16 +41,18 @@ jobs:
         run: npm install -g npm@10.8.2
 
       - name: Installer les dépendances
-        # Résilience : 3 tentatives complètes (le bug "Exit handler never
-        # called!" des runners GitHub est sporadique) + IPv4 + cache local.
+        # Résilience : on utilise le cache npm restauré par setup-node
+        # (~/.npm) avec --prefer-offline — PAS de --cache /tmp/npm-cache
+        # (vide à chaque run → re-téléchargement massif → bug npm
+        # "Exit handler never called!" sur les runners). 3 tentatives.
         env:
           NODE_OPTIONS: --dns-result-order=ipv4first
         run: |
           for i in 1 2 3; do
             echo "--- tentative npm ci $i/3 ---"
-            if npm ci --no-audit --no-fund --fetch-retries=5 \
-              --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 \
-              --cache /tmp/npm-cache; then
+            if npm ci --no-audit --no-fund --prefer-offline \
+              --fetch-retries=5 \
+              --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000; then
               echo "npm ci OK (tentative $i)"
               break
             fi
@@ -91,15 +93,17 @@ jobs:
         run: npm install -g npm@10.8.2
 
       - name: Installer les dépendances
-        # Résilience : 3 tentatives complètes + IPv4 + cache local.
+        # Résilience : cache npm restauré par setup-node + --prefer-offline
+        # (pas de --cache /tmp/npm-cache vide → bug "Exit handler never
+        # called!" sur les runners). 3 tentatives.
         env:
           NODE_OPTIONS: --dns-result-order=ipv4first
         run: |
           for i in 1 2 3; do
             echo "--- tentative npm ci $i/3 ---"
-            if npm ci --no-audit --no-fund --fetch-retries=5 \
-              --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 \
-              --cache /tmp/npm-cache; then
+            if npm ci --no-audit --no-fund --prefer-offline \
+              --fetch-retries=5 \
+              --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000; then
               echo "npm ci OK (tentative $i)"
               break
             fi
