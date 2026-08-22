@@ -17,8 +17,24 @@ RUN apt-get update \
 WORKDIR /app
 
 # Installation des dépendances (cache Docker optimisé)
+# Résilience : le bug npm "Exit handler never called!" peut laisser un
+# node_modules incomplet avec exit 0 → vérification d'intégrité + retry miroir.
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN for i in 1 2 3; do \
+      echo "--- tentative npm ci $i/3 ---"; \
+      if npm ci --no-audit --no-fund --prefer-offline --fetch-retries=5 \
+        --fetch-retry-mintimeout=2000 --fetch-retry-maxtimeout=60000 \
+        && [ -x node_modules/.bin/prisma ]; then \
+        echo "npm ci OK (intégrité vérifiée)"; break; \
+      fi; \
+      rm -rf node_modules; \
+      if npm ci --no-audit --no-fund --registry=https://registry.npmmirror.com \
+        && [ -x node_modules/.bin/prisma ]; then \
+        echo "npm ci OK via miroir"; break; \
+      fi; \
+      [ "$i" = 3 ] && { echo "npm ci a échoué 3 fois"; exit 1; }; \
+      rm -rf node_modules; sleep 5; \
+    done
 
 # Copie du code source et build
 COPY prisma ./prisma
