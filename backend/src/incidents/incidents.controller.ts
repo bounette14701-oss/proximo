@@ -94,7 +94,9 @@ export class IncidentsController {
 
   @Get()
   async all() {
-    const incidents = await this.incidentsService.listAll();
+    // Les habitants voient les signalements SANS l'email des auteurs
+    // (l'admin a son propre endpoint /admin/incidents avec les emails).
+    const incidents = await this.incidentsService.listPublic();
     return { incidents };
   }
 
@@ -121,6 +123,7 @@ export class IncidentsController {
     return { incident };
   }
 
+  /** Téléchargement d'une pièce jointe — auteur, admin OU habitant ACTIVE. */
   @Get(':id/attachments/:attachmentId')
   async download(
     @Param('id', ParseUUIDPipe) id: string,
@@ -128,7 +131,12 @@ export class IncidentsController {
     @CurrentUser() user: { id: string; role: string },
     @Res() response: Response,
   ) {
-    const incident = await this.incidentsService.findForUser(id, user.id, user.role === 'ADMIN');
+    // Habitants : le détail public autorise tout compte ACTIVE (pas d'email
+    // exposé). Auteur/admin : accès complet via findForUser.
+    const incident =
+      user.role === 'ADMIN'
+        ? await this.incidentsService.findForUser(id, user.id, true)
+        : await this.incidentsService.findPublic(id);
     const attachment = (incident.attachments as IncidentAttachment[]).find(
       (a) => a.id === attachmentId,
     );

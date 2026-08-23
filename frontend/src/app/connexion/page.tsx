@@ -18,7 +18,13 @@ import type { User } from '@/lib/types';
 function ConnexionForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get('next') ?? '/';
+  // Anti-redirection ouverte : `next` doit être un chemin interne (commence
+  // par `/`, mais pas `//` ni `/\`), jamais une URL absolue.
+  const rawNext = searchParams.get('next') ?? '/';
+  const next =
+    rawNext.startsWith('/') && !rawNext.startsWith('//') && !rawNext.startsWith('/\\')
+      ? rawNext
+      : '/';
   const needsTwoFactor = searchParams.get('2fa') === '1';
   const googleError = searchParams.get('error') === 'google';
   const { setUser, refresh } = useAuth();

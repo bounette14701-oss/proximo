@@ -205,7 +205,6 @@ export class IncidentsService implements OnModuleInit, OnModuleDestroy {
     if (!incident) throw new NotFoundException('Signalement introuvable');
     return incident;
   }
-
   /** Tous les signalements (administration). */
   async listAll(status?: string): Promise<
     Array<
@@ -219,6 +218,7 @@ export class IncidentsService implements OnModuleInit, OnModuleDestroy {
           floor: string | null;
           showDetails: boolean;
         };
+        _count: { comments: number };
       }
     >
   > {
@@ -232,6 +232,40 @@ export class IncidentsService implements OnModuleInit, OnModuleDestroy {
             firstName: true,
             lastName: true,
             email: true,
+            building: true,
+            floor: true,
+            showDetails: true,
+          },
+        },
+        _count: { select: { comments: true } },
+      },
+    });
+  }
+
+  /** Signalements visibles par les habitants (jamais l'email des auteurs). */
+  async listPublic(): Promise<
+    Array<
+      Incident & {
+        attachments: IncidentAttachment[];
+        user: {
+          firstName: string;
+          lastName: string;
+          building: string | null;
+          floor: string | null;
+          showDetails: boolean;
+        };
+        _count: { comments: number };
+      }
+    >
+  > {
+    return this.prisma.incident.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        attachments: { orderBy: { createdAt: 'asc' } },
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
             building: true,
             floor: true,
             showDetails: true,
