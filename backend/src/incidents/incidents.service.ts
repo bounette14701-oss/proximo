@@ -175,6 +175,24 @@ export class IncidentsService implements OnModuleInit, OnModuleDestroy {
     return incident;
   }
 
+  /** Détail d'un signalement pour un habitant (visible par tous les ACTIVE). */
+  async findPublic(incidentId: string): Promise<
+    Incident & {
+      attachments: IncidentAttachment[];
+      user: { firstName: string; lastName: string } | null;
+    }
+  > {
+    const incident = await this.prisma.incident.findUnique({
+      where: { id: incidentId },
+      include: {
+        attachments: { orderBy: { createdAt: 'asc' } },
+        user: { select: { firstName: true, lastName: true } },
+      },
+    });
+    if (!incident) throw new NotFoundException('Signalement introuvable');
+    return incident;
+  }
+
   /** Tous les signalements (administration). */
   async listAll(status?: string): Promise<
     Array<

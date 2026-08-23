@@ -21,7 +21,7 @@ export default function IncidentDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api<{ incident: Incident }>(`/incidents/${id}`)
+    api<{ incident: Incident }>(`/incidents/${id}/public`)
       .then((data) => setIncident(data.incident))
       .catch((err) => setError(err instanceof Error ? err.message : 'Signalement introuvable'))
       .finally(() => setLoading(false));

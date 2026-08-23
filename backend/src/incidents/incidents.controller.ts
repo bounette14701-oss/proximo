@@ -105,6 +105,13 @@ export class IncidentsController {
     return { incident };
   }
 
+  /** Détail public d'un signalement (visible par tous les habitants ACTIVE). */
+  @Get(':id/public')
+  async publicDetail(@Param('id', ParseUUIDPipe) id: string) {
+    const incident = await this.incidentsService.findPublic(id);
+    return { incident };
+  }
+
   @Get(':id')
   async detail(
     @Param('id', ParseUUIDPipe) id: string,
