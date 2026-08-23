@@ -265,7 +265,7 @@ export class EmailService implements OnModuleInit {
       neighborhood?: string | null;
     },
     author: { firstName: string; lastName: string; email: string },
-    attachments: { filename: string; mimeType: string }[],
+    attachments: { filename: string; mimeType: string; path?: string }[],
     residenceName?: string | null,
   ): Promise<void> {
     const labels: Record<string, string> = {
@@ -274,6 +274,20 @@ export class EmailService implements OnModuleInit {
       DAMAGE: 'Dégradation',
       OTHER: 'Autre',
     };
+    // Lit les fichiers sur le volume pour les joindre réellement au mail.
+    const attachmentBuffers: Array<{ filename: string; content: Buffer }> = [];
+    for (const attachment of attachments) {
+      if (!attachment.path) continue;
+      try {
+        const uploads = process.env.UPLOAD_DIR ?? join(process.cwd(), 'uploads');
+        const content = await readFile(join(uploads, attachment.path));
+        attachmentBuffers.push({ filename: attachment.filename, content });
+      } catch (error) {
+        this.logger.warn(
+          `Pièce jointe illisible pour le mail agence (${attachment.filename}) : ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
     await this.sendMail(
       syndicEmail,
       `[Proximo] Signalement : ${incident.title}`,
@@ -287,10 +301,11 @@ export class EmailService implements OnModuleInit {
               <td style="padding:4px 0">${this.escape(incident.neighborhood ?? 'Non précisée')}</td></tr>
           <tr><td style="padding:4px 0;color:#64748b">Auteur</td>
               <td style="padding:4px 0">${this.escape(author.firstName)} ${this.escape(author.lastName)} (${this.escape(author.email)})</td></tr>
-          ${attachments.length ? `<tr><td style="padding:4px 0;color:#64748b">Pièces jointes</td><td style="padding:4px 0">${attachments.map((a) => this.escape(a.filename)).join(', ')}</td></tr>` : ''}
+          ${attachmentBuffers.length ? `<tr><td style="padding:4px 0;color:#64748b">Pièces jointes</td><td style="padding:4px 0">${attachmentBuffers.map((a) => this.escape(a.filename)).join(', ')}</td></tr>` : ''}
         </table>
         <p style="margin-top:12px;white-space:pre-line">${this.escape(incident.description)}</p>
       </div>`,
+      attachmentBuffers,
     );
   }
 

@@ -318,7 +318,7 @@ export class IncidentsService implements OnModuleInit, OnModuleDestroy {
         neighborhood: neighborhood ?? 'Non précisé',
       },
       reporter,
-      attachments.map((a) => ({ filename: a.filename, mimeType: a.mimeType })),
+      attachments.map((a) => ({ filename: a.filename, mimeType: a.mimeType, path: a.path })),
       settings?.residenceName,
     );
   }
