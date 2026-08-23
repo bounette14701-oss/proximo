@@ -114,7 +114,7 @@ export function Navbar() {
             )}
           </div>
 
-          <div className="hidden items-center gap-2 md:flex">
+          <div className="flex items-center gap-2">
             {loading ? null : user ? (
               <button
                 type="button"
@@ -147,17 +147,22 @@ export function Navbar() {
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
         <div className="mx-auto flex max-w-md items-stretch justify-around">
           {TABS.map((tab) => {
-            const active = isTabActive(tab.href);
+            // Non connecté : l'onglet Profil devient un accès Connexion
+            // (sinon l'utilisateur atterrit sur /profil → redirigé).
+            const isProfile = tab.href === '/profil';
+            const effectiveHref = !user && isProfile ? '/connexion' : tab.href;
+            const effectiveLabel = !user && isProfile ? 'Connexion' : tab.label;
+            const active = isTabActive(effectiveHref);
             return (
               <Link
                 key={tab.href}
-                href={tab.href}
+                href={effectiveHref}
                 className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${
                   active ? 'text-brand-700' : 'text-slate-400'
                 }`}
               >
                 <span className="text-xl leading-none">{tab.icon}</span>
-                {tab.label}
+                {effectiveLabel}
                 {tab.href === '/messages' && unread > 0 && (
                   <span className="absolute right-1/2 top-1 translate-x-3 rounded-full bg-brand-600 px-1.5 text-[10px] font-bold text-white">
                     {unread}
