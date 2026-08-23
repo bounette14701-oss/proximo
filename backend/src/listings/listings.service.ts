@@ -82,14 +82,20 @@ export class ListingsService {
   /** Crée une annonce pour l'utilisateur connecté. */
   async create(ownerId: string, dto: CreateListingDto): Promise<ListingResponse> {
     // Repli : sans localisation fournie, on utilise la résidence de l'utilisateur
-    // (la géolocalisation n'est plus requise à l'échelle d'un immeuble).
+    // (la géolocalisation n'est plus requise à l'échelle d'un immeuble), puis
+    // le nom de résidence configuré (settings) en dernier recours.
     const user = await this.prisma.user.findUnique({
       where: { id: ownerId },
       select: { neighborhood: true },
     });
+    const residenceName = await this.getResidenceName();
     const effectiveDto: CreateListingDto = {
       ...dto,
-      neighborhood: dto.neighborhood?.trim() || user?.neighborhood?.trim() || undefined,
+      neighborhood:
+        dto.neighborhood?.trim() ||
+        user?.neighborhood?.trim() ||
+        residenceName?.trim() ||
+        undefined,
     };
     const location = await this.resolveLocation(effectiveDto);
 
