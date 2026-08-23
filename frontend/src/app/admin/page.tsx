@@ -78,6 +78,8 @@ export default function AdminPage() {
   const [smtpSecure, setSmtpSecure] = useState(false);
   const [smtpUser, setSmtpUser] = useState('');
   const [smtpPass, setSmtpPass] = useState('');
+  const [incidentNotifEnabled, setIncidentNotifEnabled] = useState(true);
+  const [listingNotifEnabled, setListingNotifEnabled] = useState(true);
   const [emailSaving, setEmailSaving] = useState(false);
   const [emailTesting, setEmailTesting] = useState(false);
 
@@ -138,6 +140,8 @@ export default function AdminPage() {
         setSmtpUser(data.settings.smtpUser ?? '');
         setBrevoApiKey('');
         setSmtpPass('');
+        setIncidentNotifEnabled(data.settings.incidentNotificationsEnabled ?? true);
+        setListingNotifEnabled(data.settings.listingNotificationsEnabled ?? true);
       })
       .catch(() => setEmailSettings(null));
   }, []);
@@ -250,6 +254,8 @@ export default function AdminPage() {
           smtpSecure,
           smtpUser,
           ...(smtpPass ? { smtpPass } : {}),
+          incidentNotificationsEnabled: incidentNotifEnabled,
+          listingNotificationsEnabled: listingNotifEnabled,
         }),
       });
       setEmailSettings(data.settings);
@@ -905,6 +911,52 @@ export default function AdminPage() {
                 </label>
               </div>
             )}
+
+            {/* ─── Mails automatiques à la résidence ─────────── */}
+            <div className="mt-6 border-t border-slate-100 pt-5">
+              <h3 className="text-sm font-semibold text-slate-900">Mails automatiques</h3>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Notifications envoyées aux habitants (comptes ACTIVE) — désactivable à tout moment.
+              </p>
+              <div className="mt-3 space-y-3">
+                <label className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <span>
+                    <span className="block text-sm font-medium text-slate-800">
+                      🛠️ Nouveau signalement
+                    </span>
+                    <span className="block text-xs text-slate-500">
+                      Email à tous les habitants à la déclaration d&apos;un incident.
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    checked={incidentNotifEnabled}
+                    onChange={(event) => setIncidentNotifEnabled(event.target.checked)}
+                    className="h-5 w-9 shrink-0 cursor-pointer appearance-none rounded-full bg-slate-300 transition checked:bg-brand-600"
+                    aria-label="Activer les mails de signalement"
+                  />
+                </label>
+                <label className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <span>
+                    <span className="block text-sm font-medium text-slate-800">
+                      📦 Nouvelle annonce
+                    </span>
+                    <span className="block text-xs text-slate-500">
+                      Email aux habitants quand un voisin coche « notifier la résidence ».
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    checked={listingNotifEnabled}
+                    onChange={(event) => setListingNotifEnabled(event.target.checked)}
+                    className="h-5 w-9 shrink-0 cursor-pointer appearance-none rounded-full bg-slate-300 transition checked:bg-brand-600"
+                    aria-label="Activer les mails d'annonce"
+                  />
+                </label>
+              </div>
+            </div>
 
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <button

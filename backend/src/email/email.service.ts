@@ -336,6 +336,22 @@ export class EmailService implements OnModuleInit {
   // ─── Notifications à la résidence ───────────────────────────
 
   /**
+   * Vérifie si une notification automatique à la résidence est activée
+   * (interrupteurs admin dans EmailSettings, défaut : activé).
+   */
+  async isResidentNotificationEnabled(kind: 'incident' | 'listing'): Promise<boolean> {
+    try {
+      const settings = await this.prisma.emailSettings.findUnique({ where: { id: 1 } });
+      if (!settings) return true;
+      return kind === 'incident'
+        ? settings.incidentNotificationsEnabled
+        : settings.listingNotificationsEnabled;
+    } catch {
+      return true; // En cas d'erreur, on laisse passer (défaut sécurisé : envoyer).
+    }
+  }
+
+  /**
    * Envoie un email à tous les habitants au statut ACTIVE (sauf l'auteur).
    * Ne lève jamais : chaque échec est loggé individuellement.
    */
@@ -382,6 +398,10 @@ export class EmailService implements OnModuleInit {
     authorFirstName: string,
     attachments?: Array<{ filename: string; path: string }>,
   ): Promise<void> {
+    if (!(await this.isResidentNotificationEnabled('incident'))) {
+      this.logger.log('Notification incident à la résidence désactivée par l’admin (skippée).');
+      return;
+    }
     const categoryLabels: Record<string, string> = {
       WATER_LEAK: 'Fuite d’eau',
       ELEVATOR: 'Panne d’ascenseur',
@@ -436,6 +456,10 @@ export class EmailService implements OnModuleInit {
     listing: { id: string; title: string; description: string },
     authorFirstName: string,
   ): Promise<void> {
+    if (!(await this.isResidentNotificationEnabled('listing'))) {
+      this.logger.log('Notification annonce à la résidence désactivée par l’admin (skippée).');
+      return;
+    }
     await this.notifyResidents({
       subject: `📦 Nouvelle annonce : ${listing.title}`,
       buildHtml: (recipient) =>

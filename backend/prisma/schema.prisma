@@ -166,6 +166,9 @@ model EmailSettings {
   smtpSecure    Boolean  @default(false)
   smtpUser      String?
   smtpPass      String?
+  // Mails automatiques à la résidence (défaut : activés)
+  incidentNotificationsEnabled Boolean @default(true)
+  listingNotificationsEnabled  Boolean @default(true)
   updatedAt     DateTime @updatedAt
 }
 

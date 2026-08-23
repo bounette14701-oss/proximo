@@ -176,6 +176,8 @@ export interface EmailSettings {
   smtpPort: number | null;
   smtpSecure: boolean;
   smtpUser: string | null;
+  incidentNotificationsEnabled: boolean;
+  listingNotificationsEnabled: boolean;
   effectiveMode: 'brevo' | 'smtp' | 'log';
 }
 

@@ -216,6 +216,8 @@ export class AdminController {
         smtpSecure: process.env.SMTP_SECURE === 'true',
         smtpUser: process.env.SMTP_USER ?? null,
         smtpPass: process.env.SMTP_PASS ?? null,
+        incidentNotificationsEnabled: true,
+        listingNotificationsEnabled: true,
       },
       update: {},
     });
@@ -233,6 +235,8 @@ export class AdminController {
         smtpPort: settings.smtpPort,
         smtpSecure: settings.smtpSecure,
         smtpUser: settings.smtpUser ?? '',
+        incidentNotificationsEnabled: settings.incidentNotificationsEnabled,
+        listingNotificationsEnabled: settings.listingNotificationsEnabled,
         effectiveMode: resolved.mode,
       },
     };
@@ -268,6 +272,12 @@ export class AdminController {
           : dto.smtpPass === ''
             ? { smtpPass: current.smtpPass }
             : {}),
+        ...(dto.incidentNotificationsEnabled !== undefined
+          ? { incidentNotificationsEnabled: dto.incidentNotificationsEnabled }
+          : {}),
+        ...(dto.listingNotificationsEnabled !== undefined
+          ? { listingNotificationsEnabled: dto.listingNotificationsEnabled }
+          : {}),
       },
     });
     await this.emailService.refreshTransporter();
