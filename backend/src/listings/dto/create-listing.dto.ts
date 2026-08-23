@@ -71,4 +71,13 @@ export class CreateListingDto {
   @Transform(({ value }) => value === true || value === 'true')
   @IsBoolean({ message: 'showDetails invalide' })
   showDetails?: boolean;
+
+  /**
+   * Notifier la résidence par email lors de la publication
+   * (défaut : désactivé — case à cocher dans le formulaire).
+   */
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean({ message: 'notifyResidence invalide' })
+  notifyResidence?: boolean;
 }

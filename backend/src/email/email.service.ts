@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import { PrismaService } from '../prisma/prisma.service';
+import { emailLayout } from './email.templates';
 
 /**
  * Réglages d'envoi d'emails résolus (DB d'abord, puis variables d'env).
@@ -295,6 +296,101 @@ export class EmailService implements OnModuleInit {
         <p><a href="${this.appUrl()}/signalements" style="color:#237a49">Voir mes signalements →</a></p>
       </div>`,
     );
+  }
+
+  // ─── Notifications à la résidence ───────────────────────────
+
+  /**
+   * Envoie un email à tous les habitants au statut ACTIVE (sauf l'auteur).
+   * Ne lève jamais : chaque échec est loggé individuellement.
+   */
+  async notifyResidents(options: {
+    subject: string;
+    /** Construit le HTML pour un destinataire (prénom + lien personnalisés). */
+    buildHtml: (recipient: { firstName: string; lastName: string }) => string;
+    excludeUserId?: string;
+  }): Promise<void> {
+    try {
+      const residents = await this.prisma.user.findMany({
+        where: {
+          status: 'ACTIVE',
+          ...(options.excludeUserId ? { id: { not: options.excludeUserId } } : {}),
+        },
+        select: { id: true, firstName: true, lastName: true, email: true },
+      });
+      for (const resident of residents) {
+        try {
+          await this.sendMail(resident.email, options.subject, options.buildHtml(resident));
+        } catch (error) {
+          this.logger.error(
+            `Échec email résidence → ${resident.email} : ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+      }
+      this.logger.log(`Emails résidence envoyés : ${residents.length} destinataire(s)`);
+    } catch (error) {
+      this.logger.error(
+        `Impossible de notifier la résidence : ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  /** Email aux habitants : nouveau signalement déclaré. */
+  async sendIncidentToResidents(
+    incident: { id: string; title: string; category: string; description: string },
+    authorFirstName: string,
+  ): Promise<void> {
+    const categoryLabels: Record<string, string> = {
+      WATER_LEAK: 'Fuite d’eau',
+      ELEVATOR: 'Panne d’ascenseur',
+      DAMAGE: 'Dégradation',
+      OTHER: 'Autre',
+    };
+    await this.notifyResidents({
+      subject: `🛠️ Nouveau signalement : ${incident.title}`,
+      buildHtml: (recipient) =>
+        emailLayout({
+          recipientFirstName: recipient.firstName,
+          heading: '🛠️ Nouveau signalement dans la résidence',
+          body: `
+            <p>Un signalement a été déclaré par <strong>${this.escape(authorFirstName)}</strong> :</p>
+            <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;font-size:14px;">
+              <tr>
+                <td style="padding:6px 0;color:#64748b;width:110px;">Type</td>
+                <td style="padding:6px 0;"><strong>${this.escape(categoryLabels[incident.category] ?? incident.category)}</strong></td>
+              </tr>
+              <tr>
+                <td style="padding:6px 0;color:#64748b;">Titre</td>
+                <td style="padding:6px 0;"><strong>${this.escape(incident.title)}</strong></td>
+              </tr>
+            </table>
+            <blockquote style="margin:12px 0 0;padding:10px 14px;border-left:3px solid #059669;background:#f8fafc;color:#334155;white-space:pre-line;">${this.escape(incident.description)}</blockquote>`,
+          ctaUrl: `${this.appUrl()}/signalements/${incident.id}`,
+          ctaLabel: 'Voir le signalement',
+        }),
+    });
+  }
+
+  /** Email aux habitants : nouvelle annonce (si l'auteur a coché « notifier la résidence »). */
+  async sendListingToResidents(
+    listing: { id: string; title: string; description: string },
+    authorFirstName: string,
+  ): Promise<void> {
+    await this.notifyResidents({
+      subject: `📦 Nouvelle annonce : ${listing.title}`,
+      buildHtml: (recipient) =>
+        emailLayout({
+          recipientFirstName: recipient.firstName,
+          heading: '📦 Nouvelle annonce dans la résidence',
+          body: `
+            <p><strong>${this.escape(authorFirstName)}</strong> a publié une nouvelle annonce :</p>
+            <p style="margin:12px 0 0;padding:10px 14px;border-left:3px solid #059669;background:#f8fafc;color:#334155;white-space:pre-line;">
+              <strong>${this.escape(listing.title)}</strong><br/>${this.escape(listing.description)}
+            </p>`,
+          ctaUrl: `${this.appUrl()}/annonces/${listing.id}`,
+          ctaLabel: 'Voir l’annonce',
+        }),
+    });
   }
 
   // ─── Utilitaires ────────────────────────────────────────────

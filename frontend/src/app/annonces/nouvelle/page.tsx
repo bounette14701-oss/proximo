@@ -36,6 +36,7 @@ function NewListingForm() {
   const [neighborhood, setNeighborhood] = useState('');
   const [location, setLocation] = useState('');
   const [showDetails, setShowDetails] = useState(true);
+  const [notifyResidence, setNotifyResidence] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -92,6 +93,7 @@ function NewListingForm() {
         category,
         description: description.trim(),
         showDetails,
+        notifyResidence,
       };
       if (neighborhood.trim()) {
         // Résidence : pas de géolocalisation nécessaire à l'échelle d'un immeuble.
@@ -251,15 +253,32 @@ function NewListingForm() {
               </div>
             </>
           ) : (
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input
-                type="checkbox"
-                checked={showDetails}
-                onChange={(event) => setShowDetails(event.target.checked)}
-                className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-              />
-              Afficher mon bâtiment et mon étage sur cette publication
-            </label>
+            <>
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={showDetails}
+                  onChange={(event) => setShowDetails(event.target.checked)}
+                  className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                />
+                Afficher mon bâtiment et mon étage sur cette publication
+              </label>
+
+              <label className="flex items-start gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={notifyResidence}
+                  onChange={(event) => setNotifyResidence(event.target.checked)}
+                  className="mt-0.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                />
+                <span>
+                  Notifier la résidence par email
+                  <span className="block text-xs font-normal text-slate-400">
+                    Les habitants recevront un mail avec votre annonce.
+                  </span>
+                </span>
+              </label>
+            </>
           )}
           {error && <ErrorMessage message={error} />}
           {success && <SuccessMessage message={success} />}

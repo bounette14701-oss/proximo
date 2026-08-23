@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Listing, Prisma } from '@prisma/client';
 import { GeocodingService } from '../geocoding/geocoding.service';
+import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { QueryListingsDto } from './dto/query-listings.dto';
@@ -52,6 +53,7 @@ export class ListingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly geocoding: GeocodingService,
+    private readonly emailService: EmailService,
   ) {}
 
   /** Nom de résidence configuré (settings singleton) — repli silencieux. */
@@ -120,6 +122,18 @@ export class ListingsService {
         where: { id: ownerId },
         data: { showDetails: dto.showDetails },
       });
+    }
+
+    // Option « notifier la résidence par email » (défaut : désactivé).
+    if (dto.notifyResidence === true) {
+      const author = await this.prisma.user.findUnique({
+        where: { id: ownerId },
+        select: { firstName: true },
+      });
+      await this.emailService.sendListingToResidents(
+        { id: listing.id, title: listing.title, description: listing.description },
+        author?.firstName ?? '',
+      );
     }
 
     return this.findOne(listing.id, ownerId);

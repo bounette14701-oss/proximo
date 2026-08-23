@@ -151,6 +151,13 @@ export class IncidentsService implements OnModuleInit, OnModuleDestroy {
 
     await this.notifySyndic(incident, attachments, dto.neighborhood ?? userNeighborhood, userId);
 
+    // Notifier les habitants de la résidence (mail groupé, non bloquant).
+    const reporter = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true },
+    });
+    await this.emailService.sendIncidentToResidents(incident, reporter?.firstName ?? '');
+
     return { ...incident, attachments };
   }
 
