@@ -34,7 +34,14 @@ export function ListingCard({ listing }: { listing: Listing }) {
         <span>
           📍 {formatLocation(listing.residenceName, listing.neighborhood, listing.owner.building, listing.owner.floor, listing.owner.showDetails)} · {listing.owner.firstName}
         </span>
-        <span>{formatRelativeDate(listing.createdAt)}</span>
+        <span className="flex items-center gap-2">
+          {typeof listing.commentCount === 'number' && listing.commentCount > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 font-semibold text-brand-700">
+              💬 {listing.commentCount}
+            </span>
+          )}
+          <span>{formatRelativeDate(listing.createdAt)}</span>
+        </span>
       </div>
     </Link>
   );

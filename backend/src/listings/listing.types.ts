@@ -17,6 +17,7 @@ export interface RawListingRow {
   ownerBuilding: string | null;
   ownerFloor: string | null;
   ownerShowDetails: boolean;
+  commentCount?: number | null;
   distanceMeters?: number | null;
 }
 
@@ -34,6 +35,7 @@ export interface ListingResponse {
   neighborhood: string;
   residenceName?: string | null;
   distanceKm?: number;
+  commentCount: number;
   isOwner: boolean;
   createdAt: Date;
   owner: {
@@ -112,6 +114,7 @@ export function toListingResponse(
     neighborhood: row.neighborhood,
     residenceName: residenceName ?? row.neighborhood ?? null,
     distanceKm: distanceMeters != null ? Math.round((distanceMeters / 1000) * 10) / 10 : undefined,
+    commentCount: Number(row.commentCount ?? 0),
     isOwner: viewerId != null && viewerId === row.ownerId,
     createdAt: row.createdAt,
     owner: {

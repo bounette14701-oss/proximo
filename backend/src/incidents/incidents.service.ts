@@ -180,6 +180,7 @@ export class IncidentsService implements OnModuleInit, OnModuleDestroy {
     Incident & {
       attachments: IncidentAttachment[];
       user: { firstName: string; lastName: string } | null;
+      _count: { comments: number };
     }
   > {
     const incident = await this.prisma.incident.findUnique({
@@ -187,6 +188,7 @@ export class IncidentsService implements OnModuleInit, OnModuleDestroy {
       include: {
         attachments: { orderBy: { createdAt: 'asc' } },
         user: { select: { firstName: true, lastName: true } },
+        _count: { select: { comments: true } },
       },
     });
     if (!incident) throw new NotFoundException('Signalement introuvable');
@@ -224,6 +226,7 @@ export class IncidentsService implements OnModuleInit, OnModuleDestroy {
             showDetails: true,
           },
         },
+        _count: { select: { comments: true } },
       },
     });
   }

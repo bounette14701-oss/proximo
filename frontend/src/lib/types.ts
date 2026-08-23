@@ -43,6 +43,7 @@ export interface Listing {
   neighborhood: string;
   residenceName?: string | null;
   distanceKm?: number;
+  commentCount?: number;
   isOwner: boolean;
   createdAt: string;
   owner: ListingOwner;
@@ -105,6 +106,7 @@ export interface Incident {
   updatedAt: string;
   attachments: IncidentAttachment[];
   user?: IncidentUser;
+  _count?: { comments: number };
 }
 
 // ─── Commentaires publics (annonces & signalements) ──────────

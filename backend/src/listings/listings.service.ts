@@ -23,7 +23,8 @@ const baseColumns = Prisma.sql`
   l."id", l."title", l."description", l."category", l."status",
   l."neighborhood", l."createdAt", l."ownerId",
   u."firstName" AS "ownerFirstName", u."neighborhood" AS "ownerNeighborhood",
-  u."building" AS "ownerBuilding", u."floor" AS "ownerFloor", u."showDetails" AS "ownerShowDetails"
+  u."building" AS "ownerBuilding", u."floor" AS "ownerFloor", u."showDetails" AS "ownerShowDetails",
+  (SELECT COUNT(*)::int FROM "Comment" c WHERE c."listingId" = l."id") AS "commentCount"
 `;
 
 /** Colonnes sélectionnées avec distance PostGIS (mètres). */
@@ -33,6 +34,7 @@ function withDistanceColumns(lat: number, lng: number): Prisma.Sql {
     l."neighborhood", l."createdAt", l."ownerId",
     u."firstName" AS "ownerFirstName", u."neighborhood" AS "ownerNeighborhood",
     u."building" AS "ownerBuilding", u."floor" AS "ownerFloor", u."showDetails" AS "ownerShowDetails",
+    (SELECT COUNT(*)::int FROM "Comment" c WHERE c."listingId" = l."id") AS "commentCount",
     ${distanceSql(lat, lng)} AS "distanceMeters"
   `;
 }

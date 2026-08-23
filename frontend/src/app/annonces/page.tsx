@@ -129,28 +129,35 @@ function ListingsContent() {
             ? `${incident.attachments.length} pièce(s) jointe(s)`
             : 'sans pièce jointe'}
         </p>
-        {incident.status !== 'RESOLVED' && (
-          <button
-            type="button"
-            onClick={() => {
-              if (!window.confirm(`Marquer « ${incident.title} » comme traité ?`)) return;
-              api(`/incidents/${incident.id}/resolve`, { method: 'PATCH' })
-                .then(() => {
-                  setIncidents((current) =>
-                    current.map((item) =>
-                      item.id === incident.id ? { ...item, status: 'RESOLVED' } : item,
-                    ),
+        <span className="flex items-center gap-2">
+          {incident._count && incident._count.comments > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700">
+              💬 {incident._count.comments}
+            </span>
+          )}
+          {incident.status !== 'RESOLVED' && (
+            <button
+              type="button"
+              onClick={() => {
+                if (!window.confirm(`Marquer « ${incident.title} » comme traité ?`)) return;
+                api(`/incidents/${incident.id}/resolve`, { method: 'PATCH' })
+                  .then(() => {
+                    setIncidents((current) =>
+                      current.map((item) =>
+                        item.id === incident.id ? { ...item, status: 'RESOLVED' } : item,
+                      ),
+                    );
+                  })
+                  .catch((err) =>
+                    setError(err instanceof Error ? err.message : 'Action impossible'),
                   );
-                })
-                .catch((err) =>
-                  setError(err instanceof Error ? err.message : 'Action impossible'),
-                );
-            }}
-            className="rounded-lg border border-green-200 px-2.5 py-1 text-xs font-semibold text-green-700 hover:bg-green-50"
-          >
-            ✅ Marquer comme traité
-          </button>
-        )}
+              }}
+              className="rounded-lg border border-green-200 px-2.5 py-1 text-xs font-semibold text-green-700 hover:bg-green-50"
+            >
+              ✅ Marquer comme traité
+            </button>
+          )}
+        </span>
       </div>
     </li>
   );
