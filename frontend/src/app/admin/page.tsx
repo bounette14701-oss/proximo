@@ -449,6 +449,31 @@ export default function AdminPage() {
                           Réactiver
                         </button>
                       )}
+                      {member.role === 'ADMIN' && member.id !== user?.id ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!window.confirm(`Retirer les droits admin de ${member.email} ?`)) return;
+                            void patchUser(member.id, { role: 'USER' });
+                          }}
+                          className="rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-50"
+                        >
+                          Rétrograder
+                        </button>
+                      ) : (
+                        member.role === 'USER' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!window.confirm(`Élever ${member.email} en administrateur ?`)) return;
+                              void patchUser(member.id, { role: 'ADMIN' });
+                            }}
+                            className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700"
+                          >
+                            Élever en admin
+                          </button>
+                        )
+                      )}
                       <button
                         type="button"
                         onClick={() => void deleteUser(member.id, member.email)}
