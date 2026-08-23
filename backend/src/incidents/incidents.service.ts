@@ -156,7 +156,11 @@ export class IncidentsService implements OnModuleInit, OnModuleDestroy {
       where: { id: userId },
       select: { firstName: true },
     });
-    await this.emailService.sendIncidentToResidents(incident, reporter?.firstName ?? '');
+    await this.emailService.sendIncidentToResidents(
+      incident,
+      reporter?.firstName ?? '',
+      attachments.map((a) => ({ filename: a.filename, path: a.path })),
+    );
 
     return { ...incident, attachments };
   }

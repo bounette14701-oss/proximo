@@ -1,5 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { emailLayout } from './email.templates';
 
@@ -146,11 +148,16 @@ export class EmailService implements OnModuleInit {
   }
 
   /** Envoi générique — ne lève jamais (échec = log + échec silencieux). */
-  async sendMail(to: string, subject: string, html: string): Promise<void> {
+  async sendMail(
+    to: string,
+    subject: string,
+    html: string,
+    attachments?: Array<{ filename: string; content: Buffer }>,
+  ): Promise<void> {
     try {
       const config = await this.resolveConfig();
       if (config.mode === 'brevo' && config.brevoApiKey) {
-        await this.sendBrevo(to, subject, html, config);
+        await this.sendBrevo(to, subject, html, config, attachments);
       } else if (config.mode === 'smtp' && config.smtp) {
         const transporter =
           this.transporter ??
@@ -168,9 +175,17 @@ export class EmailService implements OnModuleInit {
           to,
           subject,
           html,
+          attachments: attachments?.map((a) => ({
+            filename: a.filename,
+            content: a.content,
+          })),
         });
       } else {
-        this.logger.warn(`[email simulé] À: ${to} — Objet: ${subject}`);
+        this.logger.warn(
+          `[email simulé] À: ${to} — Objet: ${subject}${
+            attachments?.length ? ` — ${attachments.length} pièce(s) jointe(s)` : ''
+          }`,
+        );
       }
     } catch (error) {
       this.logger.error(
@@ -185,6 +200,7 @@ export class EmailService implements OnModuleInit {
     subject: string,
     html: string,
     config: ResolvedEmailConfig,
+    attachments?: Array<{ filename: string; content: Buffer }>,
   ): Promise<void> {
     const response = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
@@ -198,6 +214,10 @@ export class EmailService implements OnModuleInit {
         to: [{ email: to }],
         subject,
         htmlContent: html,
+        attachment: attachments?.map((a) => ({
+          name: a.filename,
+          content: a.content.toString('base64'),
+        })),
       }),
     });
     if (!response.ok) {
@@ -309,6 +329,7 @@ export class EmailService implements OnModuleInit {
     /** Construit le HTML pour un destinataire (prénom + lien personnalisés). */
     buildHtml: (recipient: { firstName: string; lastName: string }) => string;
     excludeUserId?: string;
+    attachments?: Array<{ filename: string; content: Buffer }>;
   }): Promise<void> {
     try {
       const residents = await this.prisma.user.findMany({
@@ -320,7 +341,12 @@ export class EmailService implements OnModuleInit {
       });
       for (const resident of residents) {
         try {
-          await this.sendMail(resident.email, options.subject, options.buildHtml(resident));
+          await this.sendMail(
+            resident.email,
+            options.subject,
+            options.buildHtml(resident),
+            options.attachments,
+          );
         } catch (error) {
           this.logger.error(
             `Échec email résidence → ${resident.email} : ${error instanceof Error ? error.message : String(error)}`,
@@ -339,6 +365,7 @@ export class EmailService implements OnModuleInit {
   async sendIncidentToResidents(
     incident: { id: string; title: string; category: string; description: string },
     authorFirstName: string,
+    attachments?: Array<{ filename: string; path: string }>,
   ): Promise<void> {
     const categoryLabels: Record<string, string> = {
       WATER_LEAK: 'Fuite d’eau',
@@ -346,6 +373,18 @@ export class EmailService implements OnModuleInit {
       DAMAGE: 'Dégradation',
       OTHER: 'Autre',
     };
+    const attachmentBuffers: Array<{ filename: string; content: Buffer }> = [];
+    for (const attachment of attachments ?? []) {
+      try {
+        const uploads = process.env.UPLOAD_DIR ?? join(process.cwd(), 'uploads');
+        const content = await readFile(join(uploads, attachment.path));
+        attachmentBuffers.push({ filename: attachment.filename, content });
+      } catch (error) {
+        this.logger.warn(
+          `Pièce jointe illisible pour le mail résidence (${attachment.filename}) : ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
     await this.notifyResidents({
       subject: `🛠️ Nouveau signalement : ${incident.title}`,
       buildHtml: (recipient) =>
@@ -364,10 +403,16 @@ export class EmailService implements OnModuleInit {
                 <td style="padding:6px 0;"><strong>${this.escape(incident.title)}</strong></td>
               </tr>
             </table>
-            <blockquote style="margin:12px 0 0;padding:10px 14px;border-left:3px solid #059669;background:#f8fafc;color:#334155;white-space:pre-line;">${this.escape(incident.description)}</blockquote>`,
+            <blockquote style="margin:12px 0 0;padding:10px 14px;border-left:3px solid #059669;background:#f8fafc;color:#334155;white-space:pre-line;">${this.escape(incident.description)}</blockquote>
+            ${
+              attachmentBuffers.length
+                ? `<p style="margin:14px 0 0;font-size:13px;color:#64748b;"><strong>Pièces jointes :</strong> ${attachmentBuffers.map((a) => this.escape(a.filename)).join(', ')}</p>`
+                : ''
+            }`,
           ctaUrl: `${this.appUrl()}/signalements/${incident.id}`,
           ctaLabel: 'Voir le signalement',
         }),
+      attachments: attachmentBuffers,
     });
   }
 

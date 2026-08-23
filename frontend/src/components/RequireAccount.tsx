@@ -12,15 +12,15 @@ import { useAuth } from '@/components/AuthProvider';
  * Le backend applique la même règle (StatusGuard) : cette garde n'est
  * qu'une couche d'interface.
  */
-export function RequireAccount({ children }: { children: React.ReactNode }) {
+export function RequireAccount({ children, next }: { children: React.ReactNode; next?: string }) {
   const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!loading && !user) {
-      router.replace('/connexion');
+      router.replace(next ? `/connexion?next=${encodeURIComponent(next)}` : '/connexion');
     }
-  }, [loading, user, router]);
+  }, [loading, user, router, next]);
 
   if (loading) {
     return (

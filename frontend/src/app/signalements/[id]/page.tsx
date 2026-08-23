@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
+import { useAuth } from '@/components/AuthProvider';
 import { Comments } from '@/components/Comments';
 import { ErrorMessage, Spinner } from '@/components/Feedback';
 import { RequireAccount } from '@/components/RequireAccount';
@@ -16,16 +17,25 @@ import { INCIDENT_CATEGORY_LABELS, INCIDENT_STATUS_LABELS, Incident } from '@/li
  */
 export default function IncidentDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { user, loading: authLoading } = useAuth();
   const [incident, setIncident] = useState<Incident | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (authLoading || !user) return; // RequireAccount gère la redirection
     api<{ incident: Incident }>(`/incidents/${id}/public`)
       .then((data) => setIncident(data.incident))
       .catch((err) => setError(err instanceof Error ? err.message : 'Signalement introuvable'))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, user, authLoading]);
+
+  if (authLoading) return <Spinner label="Vérification du compte…" />;
+
+  // Non connecté : RequireAccount redirige vers /connexion?next=…
+  if (!user) {
+    return <RequireAccount next={`/signalements/${id}`}>{null}</RequireAccount>;
+  }
 
   if (loading) return <Spinner label="Chargement du signalement…" />;
 
@@ -41,7 +51,7 @@ export default function IncidentDetailPage() {
   }
 
   return (
-    <RequireAccount>
+    <RequireAccount next={`/signalements/${incident.id}`}>
       <article className="mx-auto max-w-2xl space-y-5">
         <Link
           href="/annonces?categorie=SIGNALEMENT"

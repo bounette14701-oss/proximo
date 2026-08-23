@@ -19,7 +19,7 @@ import { Comments } from '@/components/Comments';
 export default function ListingDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,11 +29,12 @@ export default function ListingDetailPage() {
   const [sent, setSent] = useState(false);
 
   useEffect(() => {
+    if (authLoading || !user) return; // RequireAccount gère la redirection
     api<{ listing: Listing }>(`/listings/${id}`)
       .then((data) => setListing(data.listing))
       .catch((err) => setError(err instanceof Error ? err.message : 'Annonce introuvable'))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, user, authLoading]);
 
   const handleContact = async () => {
     if (!listing) return;
@@ -60,6 +61,13 @@ export default function ListingDetailPage() {
     }
   };
 
+  if (authLoading) return <Spinner label="Vérification du compte…" />;
+
+  // Non connecté : RequireAccount redirige vers /connexion?next=…
+  if (!user) {
+    return <RequireAccount next={`/annonces/${id}`}>{null}</RequireAccount>;
+  }
+
   if (loading) return <Spinner label="Chargement de l'annonce…" />;
 
   if (error || !listing) {
@@ -76,7 +84,7 @@ export default function ListingDetailPage() {
   const closed = listing.status !== 'OPEN';
 
   return (
-    <RequireAccount>
+    <RequireAccount next={`/annonces/${listing.id}`}>
     <article className="mx-auto max-w-2xl space-y-5">
       <Link href="/annonces" className="text-sm font-medium text-brand-600 hover:underline">
         ← Retour aux annonces
