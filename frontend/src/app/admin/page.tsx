@@ -10,6 +10,7 @@ import {
   STATUS_LABELS,
   USER_STATUS_LABELS,
   type AdminUser,
+  type EmailSettings,
   type Incident,
   type IncidentStatus,
   type Invitation,
@@ -66,6 +67,20 @@ export default function AdminPage() {
   const [syndicEmail, setSyndicEmail] = useState('');
   const [residenceName, setResidenceName] = useState('');
 
+  // Réglages email
+  const [emailSettings, setEmailSettings] = useState<EmailSettings | null>(null);
+  const [emailMode, setEmailMode] = useState<'brevo' | 'smtp' | 'log'>('brevo');
+  const [emailFromName, setEmailFromName] = useState('');
+  const [emailFrom, setEmailFrom] = useState('');
+  const [brevoApiKey, setBrevoApiKey] = useState('');
+  const [smtpHost, setSmtpHost] = useState('');
+  const [smtpPort, setSmtpPort] = useState(587);
+  const [smtpSecure, setSmtpSecure] = useState(false);
+  const [smtpUser, setSmtpUser] = useState('');
+  const [smtpPass, setSmtpPass] = useState('');
+  const [emailSaving, setEmailSaving] = useState(false);
+  const [emailTesting, setEmailTesting] = useState(false);
+
   const loadUsers = useCallback(() => {
     const params = new URLSearchParams();
     if (search) params.set('search', search);
@@ -110,14 +125,34 @@ export default function AdminPage() {
       .catch(() => setSettings(null));
   }, []);
 
+  const loadEmailSettings = useCallback(() => {
+    api<{ settings: EmailSettings }>('/admin/email-settings')
+      .then((data) => {
+        setEmailSettings(data.settings);
+        setEmailMode(data.settings.mode);
+        setEmailFromName(data.settings.fromName);
+        setEmailFrom(data.settings.fromEmail);
+        setSmtpHost(data.settings.smtpHost ?? '');
+        setSmtpPort(data.settings.smtpPort ?? 587);
+        setSmtpSecure(data.settings.smtpSecure);
+        setSmtpUser(data.settings.smtpUser ?? '');
+        setBrevoApiKey('');
+        setSmtpPass('');
+      })
+      .catch(() => setEmailSettings(null));
+  }, []);
+
   useEffect(() => {
     loadStats();
     if (tab === 'users') loadUsers();
     if (tab === 'listings') loadListings();
     if (tab === 'incidents') loadIncidents();
     if (tab === 'invitations') loadInvitations();
-    if (tab === 'settings') loadSettings();
-  }, [tab, loadStats, loadUsers, loadListings, loadIncidents, loadInvitations, loadSettings]);
+    if (tab === 'settings') {
+      loadSettings();
+      loadEmailSettings();
+    }
+  }, [tab, loadStats, loadUsers, loadListings, loadIncidents, loadInvitations, loadSettings, loadEmailSettings]);
 
   if (!isAdmin) {
     return (
@@ -194,6 +229,55 @@ export default function AdminPage() {
       loadSettings();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Enregistrement impossible');
+    }
+  };
+
+  const saveEmailSettings = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError(null);
+    setSuccess(null);
+    setEmailSaving(true);
+    try {
+      const data = await api<{ settings: EmailSettings }>('/admin/email-settings', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          mode: emailMode,
+          fromName: emailFromName,
+          fromEmail: emailFrom,
+          ...(brevoApiKey ? { brevoApiKey } : {}),
+          smtpHost,
+          smtpPort,
+          smtpSecure,
+          smtpUser,
+          ...(smtpPass ? { smtpPass } : {}),
+        }),
+      });
+      setEmailSettings(data.settings);
+      setBrevoApiKey('');
+      setSmtpPass('');
+      setSuccess('Réglages email enregistrés.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Enregistrement impossible');
+    } finally {
+      setEmailSaving(false);
+    }
+  };
+
+  const testEmailSettings = async () => {
+    setError(null);
+    setSuccess(null);
+    setEmailTesting(true);
+    try {
+      const data = await api<{ sent: boolean; mode: string }>('/admin/email-settings/test', {
+        method: 'POST',
+      });
+      setSuccess(
+        `Email de test envoyé à ${user?.email ?? 'votre adresse'} (mode : ${data.mode}).`,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Envoi impossible');
+    } finally {
+      setEmailTesting(false);
     }
   };
 
@@ -677,6 +761,168 @@ export default function AdminPage() {
             >
               Enregistrer
             </button>
+          </form>
+
+          <form
+            onSubmit={(event) => void saveEmailSettings(event)}
+            className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+          >
+            <h2 className="font-semibold text-slate-900">Envoi d&apos;emails</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Configuration de l&apos;expéditeur des notifications (invitations, messages,
+              signalements). Les clés ne sont jamais affichées après enregistrement.
+            </p>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Mode d&apos;envoi</label>
+                <select
+                  value={emailMode}
+                  onChange={(event) => setEmailMode(event.target.value as 'brevo' | 'smtp' | 'log')}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
+                >
+                  <option value="brevo">Brevo (API — recommandé)</option>
+                  <option value="smtp">SMTP générique</option>
+                  <option value="log">Journal (aucun envoi)</option>
+                </select>
+                <p className="mt-1 text-xs text-slate-400">
+                  Mode actif :{' '}
+                  <strong>
+                    {emailSettings?.effectiveMode === 'brevo'
+                      ? 'Brevo'
+                      : emailSettings?.effectiveMode === 'smtp'
+                        ? 'SMTP'
+                        : 'Journal (aucun envoi)'}
+                  </strong>
+                </p>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Nom de l&apos;expéditeur</label>
+                <input
+                  type="text"
+                  maxLength={120}
+                  value={emailFromName}
+                  onChange={(event) => setEmailFromName(event.target.value)}
+                  placeholder="Ex. Résidence Les Cèdres"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Email de l&apos;expéditeur</label>
+                <input
+                  type="email"
+                  maxLength={160}
+                  value={emailFrom}
+                  onChange={(event) => setEmailFrom(event.target.value)}
+                  placeholder="no-reply@residence.fr"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {emailMode === 'brevo' && (
+              <div className="mt-4">
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Clé API Brevo{' '}
+                  {emailSettings?.brevoConfigured && (
+                    <span className="ml-1 rounded bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700">
+                      ✓ configurée
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={brevoApiKey}
+                  onChange={(event) => setBrevoApiKey(event.target.value)}
+                  placeholder={
+                    emailSettings?.brevoConfigured
+                      ? '•••••••• (laisser vide pour conserver)'
+                      : 'xkeysib-…'
+                  }
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
+                />
+              </div>
+            )}
+
+            {emailMode === 'smtp' && (
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Serveur SMTP</label>
+                  <input
+                    type="text"
+                    value={smtpHost}
+                    onChange={(event) => setSmtpHost(event.target.value)}
+                    placeholder="smtp.exemple.fr"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Port</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={65535}
+                    value={smtpPort}
+                    onChange={(event) => setSmtpPort(Number(event.target.value))}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Utilisateur</label>
+                  <input
+                    type="text"
+                    autoComplete="off"
+                    value={smtpUser}
+                    onChange={(event) => setSmtpUser(event.target.value)}
+                    placeholder="login@exemple.fr"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Mot de passe</label>
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    value={smtpPass}
+                    onChange={(event) => setSmtpPass(event.target.value)}
+                    placeholder={
+                      emailSettings?.smtpConfigured
+                        ? '•••••••• (laisser vide pour conserver)'
+                        : 'mot de passe'
+                    }
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
+                  />
+                </div>
+                <label className="flex items-center gap-2 text-sm text-slate-700 sm:col-span-2">
+                  <input
+                    type="checkbox"
+                    checked={smtpSecure}
+                    onChange={(event) => setSmtpSecure(event.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                  />
+                  Connexion sécurisée (SSL/TLS, port 465)
+                </label>
+              </div>
+            )}
+
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <button
+                type="submit"
+                disabled={emailSaving}
+                className="rounded-lg bg-brand-600 px-5 py-2.5 font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+              >
+                {emailSaving ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+              <button
+                type="button"
+                disabled={emailTesting}
+                onClick={() => void testEmailSettings()}
+                className="rounded-lg border border-brand-200 px-5 py-2.5 font-semibold text-brand-700 hover:bg-brand-50 disabled:opacity-50"
+              >
+                {emailTesting ? 'Envoi…' : 'Envoyer un email de test'}
+              </button>
+            </div>
           </form>
         </section>
       )}

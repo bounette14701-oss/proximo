@@ -147,6 +147,25 @@ model SyndicSettings {
   updatedAt     DateTime @updatedAt
 }
 
+// ─── Réglages d'envoi d'emails (singleton id=1) ───────────────
+// Configurés depuis l'admin (onglet Réglages) — priorité sur les variables
+// d'environnement. `mode` : 'brevo' | 'smtp' | 'log'.
+model EmailSettings {
+  id            Int      @id @default(1) // singleton
+  mode          String   @default("brevo")
+  fromName      String   @default("Proximo")
+  fromEmail     String   @default("no-reply@proximo.local")
+  // Brevo
+  brevoApiKey   String?
+  // SMTP générique
+  smtpHost      String?
+  smtpPort      Int?     @default(587)
+  smtpSecure    Boolean  @default(false)
+  smtpUser      String?
+  smtpPass      String?
+  updatedAt     DateTime @updatedAt
+}
+
 // ─── Invitation (QR code / lien à usage unique) ───────────────
 model Invitation {
   id           String    @id @default(uuid())

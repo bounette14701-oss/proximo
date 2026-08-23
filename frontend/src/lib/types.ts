@@ -143,6 +143,21 @@ export interface SyndicSettings {
   updatedAt: string;
 }
 
+/** Réglages d'envoi d'emails (admin) — les secrets ne sont jamais renvoyés. */
+export interface EmailSettings {
+  id: number;
+  mode: 'brevo' | 'smtp' | 'log';
+  fromName: string;
+  fromEmail: string;
+  brevoConfigured: boolean;
+  smtpConfigured: boolean;
+  smtpHost: string | null;
+  smtpPort: number | null;
+  smtpSecure: boolean;
+  smtpUser: string | null;
+  effectiveMode: 'brevo' | 'smtp' | 'log';
+}
+
 export const CATEGORY_LABELS: Record<ListingCategory, string> = {
   TOOL: 'Prêt de matériel',
   SERVICE: 'Service entre voisins',

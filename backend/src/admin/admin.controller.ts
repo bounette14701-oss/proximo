@@ -10,6 +10,7 @@ import {
   Param,
   ParseUUIDPipe,
   Patch,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -21,6 +22,8 @@ import { IncidentsService } from '../incidents/incidents.service';
 import { InvitationsService } from '../invitations/invitations.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateIncidentStatusDto } from '../incidents/dto/update-incident-status.dto';
+import { EmailService } from '../email/email.service';
+import { UpdateEmailSettingsDto } from './dto/update-email-settings.dto';
 import { UpdateSyndicSettingsDto } from './dto/update-syndic-settings.dto';
 import { UpdateUserAdminDto } from './dto/update-user-admin.dto';
 
@@ -35,6 +38,7 @@ export class AdminController {
     private readonly prisma: PrismaService,
     private readonly incidentsService: IncidentsService,
     private readonly invitationsService: InvitationsService,
+    private readonly emailService: EmailService,
   ) {}
 
   // ─── Utilisateurs ────────────────────────────────────────────
@@ -192,6 +196,124 @@ export class AdminController {
       },
     });
     return { settings };
+  }
+
+  // ─── Réglages d'envoi d'emails ───────────────────────────────
+
+  @Get('email-settings')
+  async getEmailSettings() {
+    const settings = await this.prisma.emailSettings.upsert({
+      where: { id: 1 },
+      create: {
+        id: 1,
+        mode: process.env.BREVO_API_KEY ? 'brevo' : process.env.SMTP_HOST ? 'smtp' : 'log',
+        fromName: process.env.BREVO_FROM_NAME ?? process.env.SMTP_FROM_NAME ?? 'Proximo',
+        fromEmail:
+          process.env.BREVO_FROM_EMAIL ?? process.env.SMTP_FROM ?? 'no-reply@proximo.local',
+        brevoApiKey: process.env.BREVO_API_KEY ?? null,
+        smtpHost: process.env.SMTP_HOST ?? null,
+        smtpPort: Number(process.env.SMTP_PORT ?? 587),
+        smtpSecure: process.env.SMTP_SECURE === 'true',
+        smtpUser: process.env.SMTP_USER ?? null,
+        smtpPass: process.env.SMTP_PASS ?? null,
+      },
+      update: {},
+    });
+    const resolved = await this.emailService.resolveConfig();
+    // Jamais renvoyer les secrets en clair — seulement « configuré » + résumé.
+    return {
+      settings: {
+        id: settings.id,
+        mode: settings.mode,
+        fromName: settings.fromName,
+        fromEmail: settings.fromEmail,
+        brevoConfigured: Boolean(settings.brevoApiKey) || Boolean(process.env.BREVO_API_KEY),
+        smtpConfigured: Boolean(settings.smtpHost) || Boolean(process.env.SMTP_HOST),
+        smtpHost: settings.smtpHost ?? '',
+        smtpPort: settings.smtpPort,
+        smtpSecure: settings.smtpSecure,
+        smtpUser: settings.smtpUser ?? '',
+        effectiveMode: resolved.mode,
+      },
+    };
+  }
+
+  @Patch('email-settings')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  async updateEmailSettings(@Body() dto: UpdateEmailSettingsDto) {
+    const current = await this.prisma.emailSettings.upsert({
+      where: { id: 1 },
+      create: { id: 1 },
+      update: {},
+    });
+    const settings = await this.prisma.emailSettings.update({
+      where: { id: 1 },
+      data: {
+        ...(dto.mode !== undefined ? { mode: dto.mode } : {}),
+        ...(dto.fromName !== undefined ? { fromName: dto.fromName } : {}),
+        ...(dto.fromEmail !== undefined ? { fromEmail: dto.fromEmail } : {}),
+        // Secrets : une valeur vide = « ne pas changer » (on ne peut pas
+        // relire un secret côté client). Une valeur non vide = remplacement.
+        ...(dto.brevoApiKey
+          ? { brevoApiKey: dto.brevoApiKey }
+          : dto.brevoApiKey === ''
+            ? { brevoApiKey: current.brevoApiKey }
+            : {}),
+        ...(dto.smtpHost !== undefined ? { smtpHost: dto.smtpHost || null } : {}),
+        ...(dto.smtpPort !== undefined ? { smtpPort: dto.smtpPort } : {}),
+        ...(dto.smtpSecure !== undefined ? { smtpSecure: dto.smtpSecure } : {}),
+        ...(dto.smtpUser !== undefined ? { smtpUser: dto.smtpUser || null } : {}),
+        ...(dto.smtpPass
+          ? { smtpPass: dto.smtpPass }
+          : dto.smtpPass === ''
+            ? { smtpPass: current.smtpPass }
+            : {}),
+      },
+    });
+    await this.emailService.refreshTransporter();
+    const resolved = await this.emailService.resolveConfig();
+    return {
+      settings: {
+        id: settings.id,
+        mode: settings.mode,
+        fromName: settings.fromName,
+        fromEmail: settings.fromEmail,
+        brevoConfigured: Boolean(settings.brevoApiKey) || Boolean(process.env.BREVO_API_KEY),
+        smtpConfigured: Boolean(settings.smtpHost) || Boolean(process.env.SMTP_HOST),
+        smtpHost: settings.smtpHost ?? '',
+        smtpPort: settings.smtpPort,
+        smtpSecure: settings.smtpSecure,
+        smtpUser: settings.smtpUser ?? '',
+        effectiveMode: resolved.mode,
+      },
+    };
+  }
+
+  /** Envoie un email de test à l'admin connecté (validation de la config). */
+  @Post('email-settings/test')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  async testEmailSettings(@CurrentUser() admin: { id: string; email: string }) {
+    const resolved = await this.emailService.resolveConfig();
+    if (resolved.mode === 'log') {
+      throw new BadRequestException(
+        'Aucun mode d’envoi configuré — renseignez Brevo ou SMTP avant de tester.',
+      );
+    }
+    await this.emailService.sendMail(
+      admin.email,
+      'Test de configuration email — Proximo',
+      `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto">
+        <h2 style="color:#237a49">📧 Test réussi</h2>
+        <p>Cet email confirme que la configuration d'envoi fonctionne :</p>
+        <table style="font-size:14px;border-collapse:collapse">
+          <tr><td style="padding:4px 0;color:#64748b">Mode</td>
+              <td style="padding:4px 0"><strong>${resolved.mode}</strong></td></tr>
+          <tr><td style="padding:4px 0;color:#64748b">Expéditeur</td>
+              <td style="padding:4px 0">${resolved.fromName} &lt;${resolved.fromEmail}&gt;</td></tr>
+        </table>
+      </div>`,
+    );
+    return { sent: true, mode: resolved.mode };
   }
 
   // ─── Signalements (modération) ─────────────────────────────
