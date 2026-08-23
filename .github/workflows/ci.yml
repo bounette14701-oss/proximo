@@ -180,6 +180,13 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Valider docker-compose.yml
+        # compose exige les secrets obligatoires ({VAR:?…}) ; sur le runner
+        # il n'y a pas de .env → on fournit des valeurs de validation (la
+        # commande ne fait que résoudre le fichier, aucun conteneur ne tourne).
+        env:
+          POSTGRES_PASSWORD: ci-validation-only
+          JWT_ACCESS_SECRET: ci-validation-only
+          JWT_REFRESH_SECRET: ci-validation-only
         run: docker compose config --quiet
 
       - name: Se connecter au registre GHCR
