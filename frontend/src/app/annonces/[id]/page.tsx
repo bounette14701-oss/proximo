@@ -9,6 +9,7 @@ import { ErrorMessage, Spinner } from '@/components/Feedback';
 import { formatDistance, formatLocation, formatRelativeDate } from '@/lib/format';
 import { CATEGORY_EMOJI, CATEGORY_LABELS, Listing, STATUS_LABELS } from '@/lib/types';
 import { RequireAccount } from '@/components/RequireAccount';
+import { Comments } from '@/components/Comments';
 
 
 /**
@@ -191,6 +192,9 @@ export default function ListingDetailPage() {
           </p>
         )}
       </div>
+
+      {/* Discussion publique dédiée */}
+      <Comments type="listing" targetId={listing.id} />
     </article>
       </RequireAccount>
   );

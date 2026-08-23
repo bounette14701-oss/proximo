@@ -43,6 +43,7 @@ model User {
   refreshTokens RefreshToken[]
   incidents     Incident[]
   invitations   Invitation[]
+  comments      Comment[]
 }
 
 // ─── Annonce d'entraide ───────────────────────────────────────
@@ -58,6 +59,7 @@ model Listing {
   neighborhood String // quartier/ville affiché (ex. "Lyon 7e")
   ownerId     String
   owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  comments    Comment[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -117,6 +119,7 @@ model Incident {
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   attachments IncidentAttachment[]
+  comments    Comment[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -178,4 +181,25 @@ model Invitation {
   createdAt    DateTime  @default(now())
 
   @@index([createdById])
+}
+
+// ─── Commentaire public (annonce ou signalement) ─────────────
+// Discussion dédiée à chaque annonce / signalement, visible par tous
+// les habitants de la résidence. Polymorphe : un seul des deux champs
+// (listingId / incidentId) est renseigné.
+model Comment {
+  id          String    @id @default(uuid())
+  content     String
+  listingId   String?
+  listing     Listing?  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  incidentId  String?
+  incident    Incident? @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([listingId, createdAt])
+  @@index([incidentId, createdAt])
+  @@index([authorId])
 }

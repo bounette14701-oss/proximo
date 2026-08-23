@@ -107,6 +107,25 @@ export interface Incident {
   user?: IncidentUser;
 }
 
+// ─── Commentaires publics (annonces & signalements) ──────────
+
+export interface CommentAuthor {
+  id: string;
+  firstName: string;
+  lastName: string;
+  showDetails: boolean;
+  building?: string | null;
+  floor?: string | null;
+}
+
+export interface Comment {
+  id: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  author: CommentAuthor;
+}
+
 // ─── Sprint 2 : invitations ──────────────────────────────────
 
 export interface Invitation {

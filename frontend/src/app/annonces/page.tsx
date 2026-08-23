@@ -91,7 +91,12 @@ function ListingsContent() {
     <li key={incident.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="font-semibold text-slate-900">{incident.title}</p>
+          <Link
+            href={`/signalements/${incident.id}`}
+            className="font-semibold text-slate-900 hover:text-brand-700 hover:underline"
+          >
+            {incident.title}
+          </Link>
           <p className="mt-0.5 text-sm text-slate-500">
             {INCIDENT_CATEGORY_LABELS[incident.category]} · 📍{' '}
             {formatLocation(
