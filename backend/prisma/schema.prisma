@@ -190,19 +190,41 @@ model Invitation {
 // Lead commercial capté depuis la page publique /souscrire.
 // `unitCount` : LESS_THAN_10 | BETWEEN_10_30 | BETWEEN_30_100 | MORE_THAN_100
 // `requesterRole` : HABITANT | CONSEIL_SYNDICAL | SYNDIC | GESTIONNAIRE
-// `status` : NEW | CONTACTED | WON | LOST
+// `status` : NEW | PENDING_PAYMENT | PAID | CONTACTED | WON | LOST
 model Lead {
-  id            String   @id @default(uuid())
-  name          String
-  email         String
-  residenceName String
-  city          String
-  unitCount     String
-  requesterRole String
-  message       String?
-  status        String   @default("NEW")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String    @id @default(uuid())
+  name            String
+  email           String
+  residenceName   String
+  city            String
+  unitCount       String
+  requesterRole   String
+  message         String?
+  stripeSessionId String?   @unique
+  status          String    @default("NEW")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  provision Provision?
+
+  @@index([status])
+}
+
+// ─── Provisionnement d'une instance (après paiement Stripe) ──
+// Une résidence payante reçoit sa propre instance Proximo (base isolée).
+// `status` : PENDING | PROVISIONING | ACTIVE | FAILED
+// `slug` : sous-domaine de l'instance (ex. <slug>.147.ovh)
+model Provision {
+  id        String   @id @default(uuid())
+  leadId    String   @unique
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  slug      String   @unique
+  status    String   @default("PENDING")
+  domain    String?
+  adminEmail String
+  error     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([status])
 }

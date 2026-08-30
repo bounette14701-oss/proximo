@@ -1,15 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ErrorMessage } from '@/components/Feedback';
 import api from '@/lib/api';
 
 /**
- * Tunnel de vente : page de souscription avec présentation complète
- * (à quoi ça sert, fonctionnement, preuve) + formulaire.
- * Le lead est enregistré côté serveur et notifie les administrateurs
- * par email. Premier mois offert, Alban recontacte sous 24 h.
+ * Tunnel de vente : présentation complète (à quoi ça sert, fonctionnement,
+ * preuve) + formulaire → session de paiement Stripe (190 €/an).
+ * Après paiement : webhook → provisionnement automatique → email d'accès.
  */
 
 const BENEFITS = [
@@ -84,13 +83,21 @@ export default function SouscrirePage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [cancelled, setCancelled] = useState(false);
+
+  // Paiement annulé ? (?cancel=1 — renvoyé par Stripe)
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('cancel') === '1') {
+      setCancelled(true);
+    }
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
     setSubmitting(true);
     try {
-      await api('/leads', {
+      const data = await api<{ url: string }>('/commerce/checkout', {
         method: 'POST',
         body: JSON.stringify({
           name,
@@ -102,38 +109,26 @@ export default function SouscrirePage() {
           message: message || undefined,
         }),
       });
-      setDone(true);
+      // Redirection vers la page de paiement sécurisée Stripe.
+      window.location.href = data.url;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Envoi impossible');
-    } finally {
       setSubmitting(false);
     }
   };
 
   if (done) {
-    return (
-      <div className="mx-auto max-w-md px-4 py-16">
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <div className="text-4xl">🎉</div>
-          <h1 className="mt-3 text-xl font-bold text-slate-900">Demande envoyée !</h1>
-          <p className="mt-2 text-sm leading-relaxed text-slate-600">
-            Merci {name.split(' ')[0]} : votre demande pour{' '}
-            <strong>{residenceName}</strong> ({city}) est bien enregistrée.
-            Nous revenons vers vous sous 24 h pour la mise en service.
-          </p>
-          <Link
-            href="/"
-            className="mt-6 inline-block rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-700"
-          >
-            Revenir à l&apos;accueil
-          </Link>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (
     <div className="space-y-12">
+      {cancelled && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-medium text-amber-800">
+          Paiement annulé. Aucun montant n’a été débité : vous pouvez réessayer
+          quand vous voulez.
+        </div>
+      )}
       {/* ─── Hero ──────────────────────────────────────────── */}
       <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 via-brand-600 to-emerald-700 px-6 py-12 text-white shadow-lg sm:px-10">
         <div className="absolute -right-8 -top-8 text-[120px] opacity-15" aria-hidden>
@@ -240,7 +235,7 @@ export default function SouscrirePage() {
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:sticky lg:top-24">
             <h2 className="text-xl font-bold text-slate-900">Souscrire ma résidence</h2>
             <p className="mt-1 text-xs text-slate-500">
-              19 €/mois tout compris · 1er mois offert · sans engagement
+              190 €/an (soit 15,83 €/mois) · 1er mois offert · sans engagement
             </p>
 
             <form onSubmit={(event) => void handleSubmit(event)} className="mt-5 space-y-3.5">
@@ -324,11 +319,11 @@ export default function SouscrirePage() {
                 disabled={submitting}
                 className="w-full rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white shadow hover:bg-brand-700 disabled:opacity-60"
               >
-                {submitting ? 'Envoi…' : 'Envoyer ma demande'}
+                {submitting ? 'Redirection vers le paiement…' : 'Souscrire et payer 190 €/an'}
               </button>
               <p className="text-center text-xs text-slate-400">
-                Réponse sous 24 h ouvrées · vos coordonnées ne servent qu’à vous
-                recontacter, elles ne sont jamais revendues
+                Paiement sécurisé par Stripe · sans engagement, résiliable à tout
+                moment · 1er mois offert
               </p>
             </form>
           </div>

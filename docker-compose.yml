@@ -54,6 +54,11 @@ services:
       BREVO_FROM_EMAIL: ${BREVO_FROM_EMAIL:-}
       BREVO_FROM_NAME: ${BREVO_FROM_NAME:-Proximo}
       SYNDIC_EMAIL: ${SYNDIC_EMAIL:-}
+      # Commerce — paiement Stripe (checkout + webhook) et provisionnement
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PRICE_ID: ${STRIPE_PRICE_ID:-}
+      COMMERCE_DOMAIN: ${COMMERCE_DOMAIN:-147.ovh}
       # Sprint 2 — URLs publiques (frontend) et stockage des pièces jointes
       APP_URL: ${APP_URL:-http://localhost:8080}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}

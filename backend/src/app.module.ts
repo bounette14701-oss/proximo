@@ -5,6 +5,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { CommentsModule } from './comments/comments.module';
+import { CommerceModule } from './commerce/commerce.module';
 import { AppThrottlerGuard } from './common/guards/app-throttler.guard';
 import { OriginCheckGuard } from './common/guards/origin-check.guard';
 import { EmailModule } from './email/email.module';
@@ -36,6 +37,7 @@ import { UsersModule } from './users/users.module';
     IncidentsModule,
     InvitationsModule,
     LeadsModule,
+    CommerceModule,
     CommentsModule,
     AdminModule,
     SetupModule,

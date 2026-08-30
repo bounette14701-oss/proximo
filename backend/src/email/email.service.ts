@@ -483,6 +483,32 @@ export class EmailService implements OnModuleInit {
     return process.env.APP_URL ?? 'http://localhost:3000';
   }
 
+  /** Paiement reçu — l'espace de la résidence est en préparation. */
+  async sendPaymentReceived(to: string, residenceName: string): Promise<void> {
+    await this.sendMail(
+      to,
+      'Paiement reçu — votre espace Proximo est en préparation',
+      emailLayout({
+        recipientFirstName: to.split('@')[0],
+        heading: '✅ Paiement reçu',
+        body: `<p style="margin:0;font-size:15px;line-height:1.6;color:#334155;">Merci pour votre souscription ! Le paiement de <strong>190 €/an</strong> pour <strong>${this.escape(residenceName)}</strong> a bien été reçu.</p><p style="margin:12px 0 0;font-size:15px;line-height:1.6;color:#334155;">Nous créons maintenant l’espace de votre résidence. Comptez quelques minutes : vous recevrez un second email avec vos identifiants de connexion et le QR code à afficher.</p>`,
+      }),
+    );
+  }
+
+  /** Renouvellement annuel confirmé. */
+  async sendRenewalConfirmed(to: string): Promise<void> {
+    await this.sendMail(
+      to,
+      'Renouvellement Proximo confirmé',
+      emailLayout({
+        recipientFirstName: to.split('@')[0],
+        heading: '🔁 Abonnement renouvelé',
+        body: `<p style="margin:0;font-size:15px;line-height:1.6;color:#334155;">Votre abonnement Proximo a été renouvelé pour une année. Merci de votre confiance !</p>`,
+      }),
+    );
+  }
+
   /** Échappement HTML strict (anti-injection dans les templates). */
   private escape(value: string): string {
     return value

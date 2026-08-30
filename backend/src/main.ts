@@ -10,7 +10,9 @@ import { AppModule } from './app.module';
  * stricte des entrées, CORS restreint aux origines déclarées.
  */
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  // rawBody : conserve le corps brut des requêtes (nécessaire pour vérifier
+  // la signature des webhooks Stripe).
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   // Un seul proxy (nginx) : nécessaire pour lire la vraie IP client
   // via X-Forwarded-For (rate limiting, logs).
