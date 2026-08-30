@@ -61,6 +61,16 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/package.json ./package.json
 
+# Utilisateur non-root (durcissement) : le conteneur ne tourne pas en root.
+# /data/uploads est le volume des pièces jointes (propriétaire uid 1001 au
+# premier montage du volume nommé).
+RUN useradd --create-home --uid 1001 --shell /usr/sbin/nologin proximo \
+    && mkdir -p /data/uploads \
+    && chown -R proximo:proximo /app /data
+ENV HOME=/home/proximo
+
+USER proximo
+
 # L'application écoute sur 3001 (exposé uniquement sur le réseau Docker)
 EXPOSE 3001
 

@@ -16,8 +16,11 @@ async function bootstrap(): Promise<void> {
   // via X-Forwarded-For (rate limiting, logs).
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
 
-  // En-têtes de sécurité. API JSON uniquement : CSP strict « rien par défaut »
+  // En-têtes de sécurité. API JSON uniquement : CSP stricte « rien par défaut »
   // (aucune ressource n'est censée être chargée depuis l'API) + COEP par défaut.
+  // Les headers redondants (X-Frame-Options, nosniff, Referrer-Policy,
+  // Permissions-Policy) sont posés une seule fois par nginx (edge) — helmet
+  // ne gère ici que la CSP pour éviter les doublons.
   app.use(
     helmet({
       contentSecurityPolicy: {
@@ -29,6 +32,9 @@ async function bootstrap(): Promise<void> {
           objectSrc: ["'none'"],
         },
       },
+      referrerPolicy: false,
+      xContentTypeOptions: false,
+      frameguard: false,
     }),
   );
   app.use(cookieParser());
