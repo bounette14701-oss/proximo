@@ -59,8 +59,13 @@ jobs:
         env:
           NODE_OPTIONS: --dns-result-order=ipv4first
         run: |
-          if [ -x node_modules/.bin/prisma ]; then
-            echo "Cache node_modules restauré — installation sautée."
+          MARKER=node_modules/.proximo-install-ok
+          LOCK_HASH=$(sha256sum package-lock.json | cut -c1-12)
+          # Ne sauter l'installation QUE si le cache correspond au lockfile
+          # courant (sinon node_modules peut être obsolète : nouvelle
+          # dépendance absente, client Prisma périmé, etc.).
+          if [ -f "$MARKER" ] && [ "$(cat "$MARKER")" = "$LOCK_HASH" ]; then
+            echo "Cache node_modules à jour — installation sautée."
             exit 0
           fi
           install_deps() {
@@ -72,6 +77,7 @@ jobs:
             echo "--- tentative $i/3 ---"
             if install_deps && [ -x node_modules/.bin/prisma ]; then
               echo "npm ci OK + intégrité vérifiée (prisma présent)"
+              echo "$LOCK_HASH" > "$MARKER"
               break
             fi
             echo "node_modules incomplet ou échec — purge et nouvelle tentative…"
@@ -79,6 +85,7 @@ jobs:
             if install_deps --registry=https://registry.npmmirror.com \
               && [ -x node_modules/.bin/prisma ]; then
               echo "npm ci OK via miroir (tentative $i)"
+              echo "$LOCK_HASH" > "$MARKER"
               break
             fi
             [ "$i" = 3 ] && { echo "npm ci a échoué 3 fois"; exit 1; }
@@ -137,8 +144,10 @@ jobs:
         env:
           NODE_OPTIONS: --dns-result-order=ipv4first
         run: |
-          if [ -x node_modules/.bin/next ]; then
-            echo "Cache node_modules restauré — installation sautée."
+          MARKER=node_modules/.proximo-install-ok
+          LOCK_HASH=$(sha256sum package-lock.json | cut -c1-12)
+          if [ -f "$MARKER" ] && [ "$(cat "$MARKER")" = "$LOCK_HASH" ]; then
+            echo "Cache node_modules à jour — installation sautée."
             exit 0
           fi
           install_deps() {
@@ -150,6 +159,7 @@ jobs:
             echo "--- tentative $i/3 ---"
             if install_deps && [ -x node_modules/.bin/next ]; then
               echo "npm ci OK + intégrité vérifiée (next présent)"
+              echo "$LOCK_HASH" > "$MARKER"
               break
             fi
             echo "node_modules incomplet ou échec — purge et nouvelle tentative…"
@@ -157,6 +167,7 @@ jobs:
             if install_deps --registry=https://registry.npmmirror.com \
               && [ -x node_modules/.bin/next ]; then
               echo "npm ci OK via miroir (tentative $i)"
+              echo "$LOCK_HASH" > "$MARKER"
               break
             fi
             [ "$i" = 3 ] && { echo "npm ci a échoué 3 fois"; exit 1; }
