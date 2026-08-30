@@ -193,7 +193,7 @@ export default function SouscrirePage() {
                   </span>
                   <div>
                     <h3 className="text-sm font-semibold text-slate-900">
-                      <span className="mr-1.5 text-brand-600">Étape {index + 1}.</span>
+                      <span className="mr-1.5 text-brand-600">Étape {index + 1} ·</span>
                       {step.title}
                     </h3>
                     <p className="mt-0.5 text-sm text-slate-600">{step.text}</p>
