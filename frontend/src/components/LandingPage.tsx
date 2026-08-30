@@ -180,7 +180,7 @@ export function LandingPage() {
                 <span className="text-sm text-slate-500">/ mois</span>
               </div>
               <p className="mt-1 text-sm text-slate-500">
-                Soit 190 €/an (2 mois offerts)
+                Soit 190 €/an au lieu de 228 €/an
               </p>
               <ul className="mt-6 space-y-2.5 text-sm text-slate-700">
                 {[
