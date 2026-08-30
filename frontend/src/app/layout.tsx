@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import './globals.css';
 import { AuthProvider } from '@/components/AuthProvider';
 import { Navbar } from '@/components/Navbar';
@@ -25,9 +26,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span aria-hidden>·</span>
               <span>Hébergé en Europe</span>
               <span aria-hidden>·</span>
-              <a href="mailto:proximo@147.ovh" className="hover:text-brand-600">
+              <a href="mailto:bounette14701@gmail.com" className="hover:text-brand-600">
                 Nous contacter
               </a>
+              <span aria-hidden>·</span>
+              <Link href="/mentions-legales" className="hover:text-brand-600">
+                Mentions légales
+              </Link>
+              <span aria-hidden>·</span>
+              <Link href="/confidentialite" className="hover:text-brand-600">
+                Confidentialité
+              </Link>
               <span aria-hidden>·</span>
               <a
                 href="https://github.com/bounette14701-oss/proximo"
