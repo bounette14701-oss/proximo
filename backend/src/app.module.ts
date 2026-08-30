@@ -12,6 +12,7 @@ import { GeocodingModule } from './geocoding/geocoding.module';
 import { HealthModule } from './health/health.module';
 import { IncidentsModule } from './incidents/incidents.module';
 import { InvitationsModule } from './invitations/invitations.module';
+import { LeadsModule } from './leads/leads.module';
 import { ListingsModule } from './listings/listings.module';
 import { MessagesModule } from './messages/messages.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -34,6 +35,7 @@ import { UsersModule } from './users/users.module';
     MessagesModule,
     IncidentsModule,
     InvitationsModule,
+    LeadsModule,
     CommentsModule,
     AdminModule,
     SetupModule,

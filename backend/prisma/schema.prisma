@@ -186,6 +186,27 @@ model Invitation {
   @@index([createdById])
 }
 
+// ─── Demande de souscription (tunnel de vente) ────────────────
+// Lead commercial capté depuis la page publique /souscrire.
+// `unitCount` : LESS_THAN_10 | BETWEEN_10_30 | BETWEEN_30_100 | MORE_THAN_100
+// `requesterRole` : HABITANT | CONSEIL_SYNDICAL | SYNDIC | GESTIONNAIRE
+// `status` : NEW | CONTACTED | WON | LOST
+model Lead {
+  id            String   @id @default(uuid())
+  name          String
+  email         String
+  residenceName String
+  city          String
+  unitCount     String
+  requesterRole String
+  message       String?
+  status        String   @default("NEW")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status])
+}
+
 // ─── Commentaire public (annonce ou signalement) ─────────────
 // Discussion dédiée à chaque annonce / signalement, visible par tous
 // les habitants de la résidence. Polymorphe : un seul des deux champs

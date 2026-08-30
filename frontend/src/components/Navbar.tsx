@@ -82,6 +82,14 @@ export function Navbar() {
 
           {/* Liens desktop */}
           <div className="hidden items-center gap-1 md:flex">
+            {!user && (
+              <Link
+                href="/#tarifs"
+                className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+              >
+                Tarifs
+              </Link>
+            )}
             {TABS.filter((tab) => tab.href !== '/messages' || user).map((tab) => (
               <Link
                 key={tab.href}
@@ -133,9 +141,15 @@ export function Navbar() {
                 </Link>
                 <Link
                   href="/inscription"
-                  className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700"
+                  className="hidden rounded-lg border border-brand-600 px-3 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50 sm:inline-block"
                 >
                   Rejoindre
+                </Link>
+                <Link
+                  href="/souscrire"
+                  className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700"
+                >
+                  Souscrire
                 </Link>
               </>
             )}
