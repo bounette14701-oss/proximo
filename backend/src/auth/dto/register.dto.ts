@@ -32,6 +32,11 @@ export class RegisterDto {
   neighborhood?: string;
 
   @IsOptional()
+  @IsString({ message: 'Code de résidence invalide' })
+  @MaxLength(32, { message: 'Code de résidence invalide' })
+  residenceCode?: string;
+
+  @IsOptional()
   @IsString({ message: 'Bâtiment invalide' })
   @MaxLength(20, { message: 'Bâtiment trop long' })
   building?: string;

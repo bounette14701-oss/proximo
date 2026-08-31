@@ -9,14 +9,21 @@ import api from '@/lib/api';
  * posé en cookie HTTP-only côté serveur. Si le compte n'existe pas encore,
  * il est créé automatiquement au retour du callback (findOrCreateUser).
  */
-export function GoogleButton({ label = 'Continuer avec Google' }: { label?: string }) {
+export function GoogleButton({
+  label = 'Continuer avec Google',
+  residenceCode,
+}: {
+  label?: string;
+  residenceCode?: string;
+}) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleClick = () => {
     setError(null);
     setLoading(true);
-    api<{ url: string }>('/auth/google')
+    const query = residenceCode ? `?residenceCode=${encodeURIComponent(residenceCode)}` : '';
+    api<{ url: string }>(`/auth/google${query}`)
       .then((data) => {
         window.location.href = data.url;
       })

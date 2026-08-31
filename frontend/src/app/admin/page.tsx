@@ -66,6 +66,7 @@ export default function AdminPage() {
   const [agencyName, setAgencyName] = useState('');
   const [syndicEmail, setSyndicEmail] = useState('');
   const [residenceName, setResidenceName] = useState('');
+  const [residenceCode, setResidenceCode] = useState('');
 
   // Réglages email
   const [emailSettings, setEmailSettings] = useState<EmailSettings | null>(null);
@@ -123,6 +124,7 @@ export default function AdminPage() {
         setAgencyName(data.settings.agencyName ?? '');
         setSyndicEmail(data.settings.email ?? '');
         setResidenceName(data.settings.residenceName ?? '');
+        setResidenceCode(data.settings.residenceCode ?? '');
       })
       .catch(() => setSettings(null));
   }, []);
@@ -227,7 +229,12 @@ export default function AdminPage() {
     try {
       await api('/admin/settings', {
         method: 'PATCH',
-        body: JSON.stringify({ agencyName, email: syndicEmail, residenceName }),
+        body: JSON.stringify({
+          agencyName,
+          email: syndicEmail,
+          residenceName,
+          residenceCode: residenceCode || undefined,
+        }),
       });
       setSuccess('Réglages syndic enregistrés.');
       loadSettings();
@@ -784,6 +791,23 @@ export default function AdminPage() {
                   placeholder="contact@syndic.fr"
                   className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
                 />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Code de résidence
+                </label>
+                <input
+                  type="text"
+                  maxLength={32}
+                  value={residenceCode}
+                  onChange={(event) => setResidenceCode(event.target.value)}
+                  placeholder="Ex. GERLAND-2026"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
+                />
+                <p className="mt-1 text-xs text-slate-400">
+                  Code requis pour créer un compte. Laissez vide pour permettre
+                  l&apos;inscription libre (non recommandé).
+                </p>
               </div>
             </div>
             <button

@@ -47,15 +47,26 @@ export class GoogleOAuthService {
   }
 
   /** Construit l'URL de redirection vers Google (avec state anti-CSRF). */
-  buildAuthorizationUrl(): { url: string; state: string } {
+  buildAuthorizationUrl(residenceCode?: string): { url: string; state: string } {
     const state = randomBytes(24).toString('hex');
+    // Le code de résidence est embarqué dans le state (rappelé par Google au
+    // callback) — le state reste imprévisible (hex aléatoire) donc anti-CSRF.
+    const stateWithCode = residenceCode ? `${state}:${encodeURIComponent(residenceCode)}` : state;
     const url = this.client.generateAuthUrl({
       access_type: 'online',
       scope: ['openid', 'profile', 'email'],
-      state,
+      state: stateWithCode,
       prompt: 'select_account',
     });
-    return { url, state };
+    return { url, state: stateWithCode };
+  }
+
+  /** Extrait le code de résidence éventuel du state OAuth. */
+  residenceCodeFromState(state: string): string | undefined {
+    const separator = state.indexOf(':');
+    if (separator === -1) return undefined;
+    const code = state.slice(separator + 1);
+    return code ? decodeURIComponent(code) : undefined;
   }
 
   /** Pose le cookie `oauth_state` (5 min, chemin restreint au callback). */
@@ -87,7 +98,11 @@ export class GoogleOAuthService {
     expectedState: string | undefined,
     receivedState: string,
   ): Promise<GoogleProfile> {
-    if (!expectedState || expectedState !== receivedState) {
+    // Le state peut contenir « hex:residenceCode » — on compare la partie hex.
+    const actualState = this.residenceCodeFromState(receivedState)
+      ? receivedState.slice(0, receivedState.indexOf(':'))
+      : receivedState;
+    if (!expectedState || expectedState !== actualState) {
       throw new UnauthorizedException('État OAuth invalide (protection CSRF)');
     }
 
@@ -123,8 +138,10 @@ export class GoogleOAuthService {
   /**
    * Récupère ou crée l'utilisateur associé au compte Google.
    * Le compte est créé en statut PENDING sauf si l'email est un admin déclaré.
+   * `residenceCode` : si fourni (validé en amont), rattache le compte à la
+   * résidence de l'instance.
    */
-  async findOrCreateUser(profile: GoogleProfile) {
+  async findOrCreateUser(profile: GoogleProfile, residenceCode?: string) {
     const existing = await this.prisma.user.findFirst({
       where: { OR: [{ googleId: profile.googleId }, { email: profile.email }] },
     });
@@ -138,6 +155,9 @@ export class GoogleOAuthService {
       return existing;
     }
 
+    const settings = await this.prisma.syndicSettings.findUnique({ where: { id: 1 } });
+    const neighborhood = residenceCode && settings?.residenceName ? settings.residenceName : null;
+
     const isAdmin = adminEmails().includes(profile.email);
     const created = await this.prisma.user.create({
       data: {
@@ -146,6 +166,7 @@ export class GoogleOAuthService {
         passwordHash: null,
         firstName: profile.firstName,
         lastName: profile.lastName,
+        neighborhood,
         role: isAdmin ? ROLE_ADMIN : 'USER',
         status: isAdmin ? STATUS_ACTIVE : STATUS_PENDING,
       },

@@ -161,6 +161,7 @@ export interface SyndicSettings {
   agencyName: string | null;
   email: string | null;
   residenceName?: string | null;
+  residenceCode?: string | null;
   updatedAt: string;
 }
 

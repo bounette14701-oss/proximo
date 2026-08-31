@@ -19,7 +19,7 @@ const argon2Mock = argon2 as jest.Mocked<typeof argon2>;
  */
 describe('AuthService', () => {
   let authService: AuthService;
-  let prisma: { user: any; refreshToken: any; invitation: any };
+  let prisma: { user: any; refreshToken: any; invitation: any; syndicSettings: any };
   let jwtService: JwtService;
   let emailService: EmailService;
 
@@ -54,6 +54,10 @@ describe('AuthService', () => {
       invitation: {
         findUnique: jest.fn(),
         update: jest.fn(),
+      },
+      syndicSettings: {
+        // Aucun code configuré par défaut : inscription libre (comportement initial).
+        findUnique: jest.fn().mockResolvedValue(null),
       },
     };
     jwtService = {

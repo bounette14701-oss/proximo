@@ -107,9 +107,23 @@ export class AuthService {
     });
 
     // Invitation (QR code) : valide le jeton et pré-remplit le quartier.
+    // Sinon, si un code de résidence est configuré, il est obligatoire et
+    // détermine la résidence (le champ « quartier » libre est ignoré).
+    const settings = await this.prisma.syndicSettings.findUnique({ where: { id: 1 } });
+    const configuredCode = settings?.residenceCode?.trim();
+
     let neighborhood = dto.neighborhood?.trim() || null;
     if (dto.invitationToken) {
       neighborhood = await this.consumeInvitation(dto.invitationToken, neighborhood);
+    } else if (configuredCode) {
+      const submitted = (dto.residenceCode ?? '').trim().toUpperCase();
+      if (!submitted || submitted !== configuredCode.toUpperCase()) {
+        throw new BadRequestException(
+          'Code de résidence invalide. Demandez-le à votre syndic ou à un voisin.',
+        );
+      }
+      // La résidence est celle de l'instance, pas du texte libre.
+      neighborhood = settings?.residenceName ?? neighborhood;
     }
 
     const isAdmin = adminEmails().includes(email);

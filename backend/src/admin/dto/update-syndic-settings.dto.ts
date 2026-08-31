@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsEmail, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 
 /**
  * Réglages du syndic / de l'agence de gestion (singleton).
@@ -20,4 +20,11 @@ export class UpdateSyndicSettingsDto {
   @IsString({ message: 'Nom de résidence invalide' })
   @MaxLength(120, { message: 'Nom de résidence trop long' })
   residenceName?: string;
+
+  @IsOptional()
+  @IsString({ message: 'Code de résidence invalide' })
+  @Matches(/^[A-Za-z0-9-]{4,32}$/, {
+    message: 'Code de résidence invalide (4 à 32 caractères, lettres, chiffres, tirets)',
+  })
+  residenceCode?: string;
 }

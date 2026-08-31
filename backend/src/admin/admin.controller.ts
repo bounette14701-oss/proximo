@@ -188,11 +188,13 @@ export class AdminController {
         agencyName: dto.agencyName ?? 'Agence de gestion',
         email: dto.email ?? '',
         ...(dto.residenceName !== undefined ? { residenceName: dto.residenceName } : {}),
+        ...(dto.residenceCode !== undefined ? { residenceCode: dto.residenceCode } : {}),
       },
       update: {
         ...(dto.agencyName !== undefined ? { agencyName: dto.agencyName } : {}),
         ...(dto.email !== undefined ? { email: dto.email } : {}),
         ...(dto.residenceName !== undefined ? { residenceName: dto.residenceName } : {}),
+        ...(dto.residenceCode !== undefined ? { residenceCode: dto.residenceCode } : {}),
       },
     });
     return { settings };

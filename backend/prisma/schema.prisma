@@ -147,6 +147,7 @@ model SyndicSettings {
   agencyName    String
   email         String
   residenceName String? // nom de la résidence affiché dans toute l'interface et les mails
+  residenceCode String? // code requis pour créer un compte (vide = inscription libre)
   updatedAt     DateTime @updatedAt
 }
 

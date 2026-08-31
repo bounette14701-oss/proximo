@@ -26,7 +26,7 @@ function InscriptionForm() {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [neighborhood, setNeighborhood] = useState('');
+  const [residenceCode, setResidenceCode] = useState('');
   const [building, setBuilding] = useState('');
   const [floor, setFloor] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +45,7 @@ function InscriptionForm() {
           lastName,
           email,
           password,
-          neighborhood: neighborhood || undefined,
+          ...(invitationToken ? {} : { residenceCode: residenceCode || undefined }),
           building: building || undefined,
           floor: floor || undefined,
           invitationToken: invitationToken || undefined,
@@ -97,7 +97,10 @@ function InscriptionForm() {
             : 'Entraide et partage de proximité 🤝'}
         </p>
 
-        <GoogleButton label="S'inscrire avec Google" />
+        <GoogleButton
+          label="S'inscrire avec Google"
+          residenceCode={invitationToken ? undefined : residenceCode || undefined}
+        />
 
         <div className="my-5 flex items-center gap-3 text-xs text-slate-400">
           <span className="h-px flex-1 bg-slate-200" />
@@ -151,13 +154,20 @@ function InscriptionForm() {
           />
           <input
             type="text"
-            required
-            maxLength={120}
-            value={neighborhood}
-            onChange={(event) => setNeighborhood(event.target.value)}
-            placeholder="Résidence / immeuble (ex. Les Cèdres)"
+            required={!invitationToken}
+            minLength={4}
+            maxLength={32}
+            autoCapitalize="characters"
+            value={residenceCode}
+            onChange={(event) => setResidenceCode(event.target.value)}
+            placeholder="Code de résidence"
             className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:border-brand-500 focus:outline-none"
           />
+          {!invitationToken && (
+            <p className="text-xs text-slate-400">
+              Le code vous a été communiqué par votre syndic ou un voisin.
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <input
               type="text"

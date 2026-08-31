@@ -1,4 +1,12 @@
-import { Controller, Get, NotFoundException, Query, Req, Res } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  NotFoundException,
+  Query,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
@@ -23,11 +31,28 @@ export class GoogleOAuthController {
 
   @Get()
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  redirect(@Res({ passthrough: true }) response: Response) {
+  async redirect(
+    @Res({ passthrough: true }) response: Response,
+    @Query('residenceCode') residenceCode?: string,
+  ) {
     if (!this.googleOAuth.enabled) {
       throw new NotFoundException('Connexion Google non configurée');
     }
-    const { url, state } = this.googleOAuth.buildAuthorizationUrl();
+
+    // Code de résidence : obligatoire avant une création de compte si un code
+    // est configuré (l'inscription par email est également contrôlée).
+    const settings = await this.prisma.syndicSettings.findUnique({ where: { id: 1 } });
+    const configuredCode = settings?.residenceCode?.trim();
+    if (configuredCode) {
+      const submitted = (residenceCode ?? '').trim().toUpperCase();
+      if (!submitted || submitted !== configuredCode.toUpperCase()) {
+        throw new BadRequestException(
+          'Code de résidence invalide. Demandez-le à votre syndic ou à un voisin.',
+        );
+      }
+    }
+
+    const { url, state } = this.googleOAuth.buildAuthorizationUrl(residenceCode?.trim());
     this.googleOAuth.setStateCookie(response, state);
     return { url };
   }
@@ -49,7 +74,8 @@ export class GoogleOAuthController {
 
     try {
       const profile = await this.googleOAuth.exchangeCode(code, expectedState, state);
-      const user = await this.googleOAuth.findOrCreateUser(profile);
+      const residenceCode = this.googleOAuth.residenceCodeFromState(state);
+      const user = await this.googleOAuth.findOrCreateUser(profile, residenceCode);
       const publicUser = this.authService.toPublicUser(user);
 
       // 2FA obligatoire pour les administrateurs : étape supplémentaire.
