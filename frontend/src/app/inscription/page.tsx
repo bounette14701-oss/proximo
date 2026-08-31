@@ -20,13 +20,15 @@ function InscriptionForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const invitationToken = searchParams.get('invitationToken') ?? '';
+  // Code de résidence pré-rempli via le QR code du flyer (?code=...).
+  const prefillCode = searchParams.get('code') ?? '';
   const { setUser, refresh } = useAuth();
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [residenceCode, setResidenceCode] = useState('');
+  const [residenceCode, setResidenceCode] = useState(prefillCode);
   const [building, setBuilding] = useState('');
   const [floor, setFloor] = useState('');
   const [error, setError] = useState<string | null>(null);
