@@ -12,18 +12,31 @@ import api from '@/lib/api';
 export function GoogleButton({
   label = 'Continuer avec Google',
   residenceCode,
+  invitationToken,
+  required = false,
 }: {
   label?: string;
   residenceCode?: string;
+  invitationToken?: string;
+  required?: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleClick = () => {
     setError(null);
+    // Blocage côté client : le code est obligatoire avant d'ouvrir Google
+    // (un code invalide est aussi rejeté par le serveur).
+    if (required && !residenceCode) {
+      setError('Saisissez d’abord le code de résidence.');
+      return;
+    }
     setLoading(true);
-    const query = residenceCode ? `?residenceCode=${encodeURIComponent(residenceCode)}` : '';
-    api<{ url: string }>(`/auth/google${query}`)
+    const params = new URLSearchParams();
+    if (residenceCode) params.set('residenceCode', residenceCode);
+    if (invitationToken) params.set('invitationToken', invitationToken);
+    const query = params.toString();
+    api<{ url: string }>(`/auth/google${query ? `?${query}` : ''}`)
       .then((data) => {
         window.location.href = data.url;
       })

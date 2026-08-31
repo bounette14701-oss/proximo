@@ -27,6 +27,7 @@ function ConnexionForm() {
       : '/';
   const needsTwoFactor = searchParams.get('2fa') === '1';
   const googleError = searchParams.get('error') === 'google';
+  const codeError = searchParams.get('error') === 'code';
   const { setUser, refresh } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -35,7 +36,11 @@ function ConnexionForm() {
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [showTwoFactor, setShowTwoFactor] = useState(needsTwoFactor);
   const [error, setError] = useState<string | null>(
-    googleError ? 'La connexion Google a échoué. Réessayez.' : null,
+    codeError
+      ? 'Code de résidence invalide. Demandez-le à votre syndic ou à un voisin.'
+      : googleError
+        ? 'La connexion Google a échoué. Réessayez.'
+        : null,
   );
   const [submitting, setSubmitting] = useState(false);
 

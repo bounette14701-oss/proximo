@@ -1,4 +1,9 @@
-import { BadGatewayException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadGatewayException,
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { OAuth2Client } from 'google-auth-library';
 import { randomBytes } from 'crypto';
 import type { Response } from 'express';
@@ -47,26 +52,41 @@ export class GoogleOAuthService {
   }
 
   /** Construit l'URL de redirection vers Google (avec state anti-CSRF). */
-  buildAuthorizationUrl(residenceCode?: string): { url: string; state: string } {
+  buildAuthorizationUrl(
+    residenceCode?: string,
+    invitationToken?: string,
+  ): { url: string; state: string } {
     const state = randomBytes(24).toString('hex');
-    // Le code de résidence est embarqué dans le state (rappelé par Google au
-    // callback) — le state reste imprévisible (hex aléatoire) donc anti-CSRF.
-    const stateWithCode = residenceCode ? `${state}:${encodeURIComponent(residenceCode)}` : state;
+    // Code de résidence et/ou jeton d'invitation embarqués dans le state
+    // (rappelés par Google au callback) — le state reste imprévisible (hex
+    // aléatoire) donc anti-CSRF. Les valeurs ne contiennent ni ':' ni '#'.
+    const payload = [state, residenceCode ?? '', invitationToken ?? '']
+      .map((part) => encodeURIComponent(part))
+      .join(':');
     const url = this.client.generateAuthUrl({
       access_type: 'online',
       scope: ['openid', 'profile', 'email'],
-      state: stateWithCode,
+      state: payload,
       prompt: 'select_account',
     });
-    return { url, state: stateWithCode };
+    return { url, state: payload };
   }
 
   /** Extrait le code de résidence éventuel du state OAuth. */
   residenceCodeFromState(state: string): string | undefined {
-    const separator = state.indexOf(':');
-    if (separator === -1) return undefined;
-    const code = state.slice(separator + 1);
-    return code ? decodeURIComponent(code) : undefined;
+    return this.statePart(state, 1);
+  }
+
+  /** Extrait le jeton d'invitation éventuel du state OAuth. */
+  invitationTokenFromState(state: string): string | undefined {
+    return this.statePart(state, 2);
+  }
+
+  private statePart(state: string, index: number): string | undefined {
+    const parts = state.split(':');
+    if (parts.length <= index) return undefined;
+    const value = decodeURIComponent(parts[index]);
+    return value || undefined;
   }
 
   /** Pose le cookie `oauth_state` (5 min, chemin restreint au callback). */
@@ -98,11 +118,9 @@ export class GoogleOAuthService {
     expectedState: string | undefined,
     receivedState: string,
   ): Promise<GoogleProfile> {
-    // Le state peut contenir « hex:residenceCode » — on compare la partie hex.
-    const actualState = this.residenceCodeFromState(receivedState)
-      ? receivedState.slice(0, receivedState.indexOf(':'))
-      : receivedState;
-    if (!expectedState || expectedState !== actualState) {
+    // Le state (cookie et écho Google) porte la même chaîne complète
+    // « hex:residenceCode:invitationToken » : comparaison stricte anti-CSRF.
+    if (!expectedState || expectedState !== receivedState) {
       throw new UnauthorizedException('État OAuth invalide (protection CSRF)');
     }
 
@@ -137,11 +155,11 @@ export class GoogleOAuthService {
 
   /**
    * Récupère ou crée l'utilisateur associé au compte Google.
-   * Le compte est créé en statut PENDING sauf si l'email est un admin déclaré.
-   * `residenceCode` : si fourni (validé en amont), rattache le compte à la
-   * résidence de l'instance.
+   * - Compte existant → connexion : aucun code requis.
+   * - Nouveau compte → création : code de résidence (ou invitation) obligatoire,
+   *   comme pour l'inscription par email.
    */
-  async findOrCreateUser(profile: GoogleProfile, residenceCode?: string) {
+  async findOrCreateUser(profile: GoogleProfile, residenceCode?: string, invitationToken?: string) {
     const existing = await this.prisma.user.findFirst({
       where: { OR: [{ googleId: profile.googleId }, { email: profile.email }] },
     });
@@ -155,8 +173,40 @@ export class GoogleOAuthService {
       return existing;
     }
 
+    // Création de compte : code de résidence ou invitation valide requis.
     const settings = await this.prisma.syndicSettings.findUnique({ where: { id: 1 } });
-    const neighborhood = residenceCode && settings?.residenceName ? settings.residenceName : null;
+    let neighborhood: string | null = null;
+
+    if (invitationToken) {
+      const invitation = await this.prisma.invitation.findUnique({
+        where: { token: invitationToken },
+      });
+      if (!invitation) {
+        throw new BadRequestException("Jeton d'invitation invalide");
+      }
+      if (invitation.usedAt) {
+        throw new BadRequestException("Ce jeton d'invitation a déjà été utilisé");
+      }
+      if (invitation.expiresAt < new Date()) {
+        throw new BadRequestException("Ce jeton d'invitation a expiré");
+      }
+      await this.prisma.invitation.update({
+        where: { id: invitation.id },
+        data: { usedAt: new Date() },
+      });
+      neighborhood = invitation.neighborhood;
+    } else {
+      const configuredCode = settings?.residenceCode?.trim();
+      if (configuredCode) {
+        const submitted = (residenceCode ?? '').trim().toUpperCase();
+        if (!submitted || submitted !== configuredCode.toUpperCase()) {
+          throw new BadRequestException(
+            'Code de résidence invalide. Demandez-le à votre syndic ou à un voisin.',
+          );
+        }
+        neighborhood = settings?.residenceName ?? null;
+      }
+    }
 
     const isAdmin = adminEmails().includes(profile.email);
     const created = await this.prisma.user.create({

@@ -97,10 +97,38 @@ function InscriptionForm() {
             : 'Entraide et partage de proximité 🤝'}
         </p>
 
-        <GoogleButton
-          label="S'inscrire avec Google"
-          residenceCode={invitationToken ? undefined : residenceCode || undefined}
-        />
+        {!invitationToken && (
+          <div className="mt-5 rounded-xl border border-brand-200 bg-brand-50 p-4">
+            <label className="mb-1 block text-sm font-semibold text-brand-800">
+              Code de résidence
+            </label>
+            <input
+              type="text"
+              required
+              minLength={4}
+              maxLength={32}
+              autoCapitalize="characters"
+              autoComplete="off"
+              value={residenceCode}
+              onChange={(event) => setResidenceCode(event.target.value)}
+              placeholder="Code de résidence"
+              className="w-full rounded-lg border border-brand-300 bg-white px-4 py-3 focus:border-brand-500 focus:outline-none"
+            />
+            <p className="mt-2 text-xs leading-relaxed text-brand-700">
+              Le code vous a été communiqué par votre syndic ou un voisin. Il est
+              requis pour toute inscription, <strong>y compris avec Google</strong>.
+            </p>
+          </div>
+        )}
+
+        <div className="mt-5">
+          <GoogleButton
+            label="S'inscrire avec Google"
+            residenceCode={residenceCode || undefined}
+            invitationToken={invitationToken || undefined}
+            required={!invitationToken}
+          />
+        </div>
 
         <div className="my-5 flex items-center gap-3 text-xs text-slate-400">
           <span className="h-px flex-1 bg-slate-200" />
@@ -152,22 +180,6 @@ function InscriptionForm() {
             placeholder="Mot de passe (8 caractères min.)"
             className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:border-brand-500 focus:outline-none"
           />
-          <input
-            type="text"
-            required={!invitationToken}
-            minLength={4}
-            maxLength={32}
-            autoCapitalize="characters"
-            value={residenceCode}
-            onChange={(event) => setResidenceCode(event.target.value)}
-            placeholder="Code de résidence"
-            className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:border-brand-500 focus:outline-none"
-          />
-          {!invitationToken && (
-            <p className="text-xs text-slate-400">
-              Le code vous a été communiqué par votre syndic ou un voisin.
-            </p>
-          )}
           <div className="grid grid-cols-2 gap-3">
             <input
               type="text"

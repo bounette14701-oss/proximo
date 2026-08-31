@@ -34,25 +34,32 @@ export class GoogleOAuthController {
   async redirect(
     @Res({ passthrough: true }) response: Response,
     @Query('residenceCode') residenceCode?: string,
+    @Query('invitationToken') invitationToken?: string,
   ) {
     if (!this.googleOAuth.enabled) {
       throw new NotFoundException('Connexion Google non configurée');
     }
 
-    // Code de résidence : obligatoire avant une création de compte si un code
-    // est configuré (l'inscription par email est également contrôlée).
-    const settings = await this.prisma.syndicSettings.findUnique({ where: { id: 1 } });
-    const configuredCode = settings?.residenceCode?.trim();
-    if (configuredCode) {
-      const submitted = (residenceCode ?? '').trim().toUpperCase();
-      if (!submitted || submitted !== configuredCode.toUpperCase()) {
-        throw new BadRequestException(
-          'Code de résidence invalide. Demandez-le à votre syndic ou à un voisin.',
-        );
+    // Un code fourni est vérifié immédiatement (retour rapide sur /inscription).
+    // Pas de code fourni → la vérification est différée au callback : c'est le
+    // cas du LOGIN (compte existant), où aucun code ne doit être demandé.
+    if (residenceCode !== undefined) {
+      const settings = await this.prisma.syndicSettings.findUnique({ where: { id: 1 } });
+      const configuredCode = settings?.residenceCode?.trim();
+      if (configuredCode) {
+        const submitted = (residenceCode ?? '').trim().toUpperCase();
+        if (!submitted || submitted !== configuredCode.toUpperCase()) {
+          throw new BadRequestException(
+            'Code de résidence invalide. Demandez-le à votre syndic ou à un voisin.',
+          );
+        }
       }
     }
 
-    const { url, state } = this.googleOAuth.buildAuthorizationUrl(residenceCode?.trim());
+    const { url, state } = this.googleOAuth.buildAuthorizationUrl(
+      residenceCode?.trim() || undefined,
+      invitationToken?.trim() || undefined,
+    );
     this.googleOAuth.setStateCookie(response, state);
     return { url };
   }
@@ -75,7 +82,8 @@ export class GoogleOAuthController {
     try {
       const profile = await this.googleOAuth.exchangeCode(code, expectedState, state);
       const residenceCode = this.googleOAuth.residenceCodeFromState(state);
-      const user = await this.googleOAuth.findOrCreateUser(profile, residenceCode);
+      const invitationToken = this.googleOAuth.invitationTokenFromState(state);
+      const user = await this.googleOAuth.findOrCreateUser(profile, residenceCode, invitationToken);
       const publicUser = this.authService.toPublicUser(user);
 
       // 2FA obligatoire pour les administrateurs : étape supplémentaire.
@@ -86,7 +94,12 @@ export class GoogleOAuthController {
 
       await this.authService.issueSession(response, publicUser, { rememberMe: false });
       return response.redirect(`${FRONTEND_URL}/auth/callback`);
-    } catch {
+    } catch (err) {
+      // Code de résidence / invitation refusés à la création de compte :
+      // message dédié. Autres erreurs : échec Google générique.
+      if (err instanceof BadRequestException) {
+        return response.redirect(`${FRONTEND_URL}/connexion?error=code`);
+      }
       return response.redirect(`${FRONTEND_URL}/connexion?error=google`);
     }
   }
