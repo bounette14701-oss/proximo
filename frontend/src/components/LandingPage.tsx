@@ -2,25 +2,25 @@ import Link from 'next/link';
 
 /**
  * Landing page publique (visiteurs non connectés) :
- * fonctionnement, fonctionnalités, tarifs, FAQ — tunnel vers /souscrire.
- * Positionnement : une initiative des habitants, outil sobre et utile.
+ * fonctionnement, fonctionnalités, FAQ — accès sur demande.
+ * Phase test : pas de tarifs ni de paiement en ligne.
  */
 
 const STEPS = [
   {
     icon: '📝',
-    title: 'Vous souscrivez',
-    text: 'Un formulaire de 2 minutes. Pas d’engagement : premier mois offert.',
+    title: 'La demande',
+    text: 'Votre résidence demande son espace en 2 minutes, nous nous occupons du reste.',
   },
   {
     icon: '🚀',
-    title: 'On installe pour vous',
-    text: 'Résidence en ligne sous 48 h : hébergement, sécurité, mises à jour inclus.',
+    title: 'Mise en ligne sous 48 h',
+    text: 'Hébergement, sécurité et mises à jour : tout est inclus, sans aucune technique à gérer.',
   },
   {
     icon: '📲',
     title: 'Vos voisins rejoignent',
-    text: 'Un QR code à afficher dans les parties communes, et chacun s’inscrit en 1 minute.',
+    text: 'Un QR code affiché dans les parties communes suffit pour que chacun s’inscrive en 1 minute.',
   },
 ];
 
@@ -60,23 +60,19 @@ const FEATURES = [
 const FAQ = [
   {
     q: 'Pour qui est Proximo ?',
-    a: 'Pour les résidences de 10 à 100 logements : copropriétés, résidences étudiantes, bailleurs sociaux. Un habitant, le conseil syndical ou le syndic peut lancer la souscription.',
+    a: 'Pour les résidences de 10 à 100 logements : copropriétés, résidences étudiantes, bailleurs sociaux. Un habitant, le conseil syndical ou le syndic peut en faire la demande.',
   },
   {
     q: 'Combien de temps avant d’être en ligne ?',
-    a: 'Comptez 48 h entre la souscription et l’envoi du QR code à afficher. Vous n’avez rien à installer.',
+    a: 'Comptez 48 h entre la demande et l’envoi du QR code à afficher. Vous n’avez rien à installer.',
   },
   {
     q: 'Qui héberge et maintient l’application ?',
-    a: 'Nous. Hébergement sécurisé, sauvegardes, mises à jour et corrections inclus dans l’abonnement. Vous n’avez aucune technique à gérer.',
+    a: 'Nous. Hébergement sécurisé, sauvegardes, mises à jour et corrections inclus. Vous n’avez aucune technique à gérer.',
   },
   {
     q: 'Quelles sont les données des habitants ?',
     a: 'Adresse exacte, email et téléphone ne sont jamais affichés aux autres habitants. Les données restent en Europe et ne sont jamais revendues.',
-  },
-  {
-    q: 'Peut-on résilier ?',
-    a: 'Oui, à tout moment, sans frais. Vous gardez vos données pendant 30 jours après la résiliation, puis elles sont supprimées.',
   },
 ];
 
@@ -100,10 +96,10 @@ export function LandingPage() {
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Link
-              href="/souscrire"
+              href="/inscription"
               className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-brand-700 shadow hover:bg-brand-50"
             >
-              Souscrire ma résidence
+              Rejoindre ma résidence
             </Link>
             <a
               href="#fonctionnement"
@@ -112,9 +108,6 @@ export function LandingPage() {
               Comment ça marche
             </a>
           </div>
-          <p className="mt-5 text-xs text-brand-100">
-            Premier mois offert · Sans engagement · Résiliable à tout moment
-          </p>
         </div>
       </section>
 
@@ -163,53 +156,6 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ─── Tarifs ──────────────────────────────────────────── */}
-      <section id="tarifs" className="scroll-mt-24">
-        <h2 className="text-center text-xl font-bold text-slate-900 sm:text-2xl">
-          Un tarif simple, tout compris
-        </h2>
-        <div className="mx-auto mt-8 max-w-md">
-          <div className="relative overflow-hidden rounded-3xl border-2 border-brand-600 bg-white shadow-lg">
-            <div className="bg-brand-600 px-6 py-2 text-center text-xs font-bold uppercase tracking-wide text-white">
-              ⭐ Le plus choisi
-            </div>
-            <div className="p-8">
-              <h3 className="text-lg font-bold text-slate-900">Proximo Résidence</h3>
-              <div className="mt-4 flex items-baseline gap-2">
-                <span className="text-4xl font-extrabold text-slate-900">19 €</span>
-                <span className="text-sm text-slate-500">/ mois</span>
-              </div>
-              <p className="mt-1 text-sm text-slate-500">
-                Soit 190 €/an au lieu de 228 €/an
-              </p>
-              <ul className="mt-6 space-y-2.5 text-sm text-slate-700">
-                {[
-                  'Installation et mise en ligne sous 48 h',
-                  'Hébergement sécurisé et sauvegardes',
-                  'Mises à jour et corrections incluses',
-                  'Support par email sous 24 h',
-                  'Premier mois offert, sans engagement',
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2">
-                    <span className="mt-0.5 text-brand-600">✓</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/souscrire"
-                className="mt-8 block rounded-xl bg-brand-600 px-5 py-3 text-center text-sm font-semibold text-white shadow hover:bg-brand-700"
-              >
-                Souscrire ma résidence
-              </Link>
-              <p className="mt-3 text-center text-xs text-slate-400">
-                Sans engagement · Résiliable à tout moment
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ─── FAQ ─────────────────────────────────────────────── */}
       <section id="faq" className="scroll-mt-24">
         <h2 className="text-center text-xl font-bold text-slate-900 sm:text-2xl">
@@ -238,18 +184,17 @@ export function LandingPage() {
       {/* ─── CTA final ───────────────────────────────────────── */}
       <section className="rounded-3xl bg-slate-900 px-6 py-12 text-center text-white">
         <h2 className="text-xl font-bold sm:text-2xl">
-          Prêt à connecter votre résidence ?
+          Votre résidence veut rejoindre Proximo ?
         </h2>
         <p className="mx-auto mt-3 max-w-md text-sm text-slate-300">
-          Souscrivez en 2 minutes, on s’occupe de tout. Vos voisins rejoignent
-          avec un simple QR code.
+          Accès sur demande : écrivez-nous et nous vous répondons sous 24 h.
         </p>
-        <Link
-          href="/souscrire"
+        <a
+          href="mailto:bounette14701@gmail.com"
           className="mt-6 inline-block rounded-xl bg-brand-500 px-6 py-3 text-sm font-semibold text-white shadow hover:bg-brand-400"
         >
-          Souscrire ma résidence
-        </Link>
+          Nous contacter
+        </a>
       </section>
     </div>
   );

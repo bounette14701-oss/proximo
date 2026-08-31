@@ -9,7 +9,7 @@ import { useAuth } from '@/components/AuthProvider';
 /**
  * Accueil :
  * - visiteur non connecté → landing page publique (fonctionnement,
- *   fonctionnalités, tarifs, CTA vers /souscrire)
+ *   fonctionnalités, FAQ, accès sur demande)
  * - habitant connecté → vie de résidence (bannière, accès rapides, fil)
  */
 export default function HomePage() {
